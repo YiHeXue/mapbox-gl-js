@@ -1,0 +1,14 @@
+{
+"name": "lake",
+"description": "lake",
+"version": "2",
+"minzoom": "1",
+"maxzoom": "17",
+"center": "100.454865,36.643080,17",
+"bounds": "99.621856,36.551424,100.758567,37.231777",
+"type": "overlay",
+"format": "pbf",
+"generator": "tippecanoe v1.36.0",
+"generator_options": "tippecanoe -e lake -pC -Z1 -z17 -f lake.geojson",
+"json": "{\"vector_layers\": [ { \"id\": \"lake\", \"description\": \"\", \"minzoom\": 1, \"maxzoom\": 17, \"fields\": {\"GB\": \"Number\", \"HYDC\": \"String\", \"NAME\": \"String\", \"OBJECTID\": \"Number\", \"Shape_Area\": \"Number\", \"Shape_Leng\": \"Number\"} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"lake\",\"count\": 1,\"geometry\": \"Polygon\",\"attributeCount\": 6,\"attributes\": [{\"attribute\": \"GB\",\"count\": 1,\"type\": \"number\",\"values\": [230101],\"min\": 230101,\"max\": 230101},{\"attribute\": \"HYDC\",\"count\": 1,\"type\": \"string\",\"values\": [\"KK00561L\"]},{\"attribute\": \"NAME\",\"count\": 1,\"type\": \"string\",\"values\": [\"青海湖(库库诺尔)\"]},{\"attribute\": \"OBJECTID\",\"count\": 1,\"type\": \"number\",\"values\": [12908],\"min\": 12908,\"max\": 12908},{\"attribute\": \"Shape_Area\",\"count\": 1,\"type\": \"number\",\"values\": [0.424104222597],\"min\": 0.424104222597,\"max\": 0.424104222597},{\"attribute\": \"Shape_Leng\",\"count\": 1,\"type\": \"number\",\"values\": [4.18533822991],\"min\": 4.18533822991,\"max\": 4.18533822991}]}]}}"
+}
