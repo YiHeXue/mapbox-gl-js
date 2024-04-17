@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Mapbox PBF数据加载</title>
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <link rel='stylesheet' href='../dist/mapbox-gl.css'/>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body,
+        #map {
+            height: 100%;
+        }
+    </style>
+</head>
+
+<body>
+
+<div id='map'></div>
+
+<script src='../dist/mapbox-gl-dev.js'></script>
+<script src='../debug/access_token_generated.js'></script>
+<script>
+    var map = new mapboxgl.Map({
+        container: 'map',
+        devtools: true,
+        style: 'mapbox://styles/mapbox/satellite-v9',
+        zoom: 6.5,
+        center: [121.564427,25.033671],
+    });
+
+    map.on('style.load', function () {
+        map.addLayer({
+            "id": "park",
+            "type": "line",
+            "source": {
+                type: 'vector',
+                tiles: ["http://localhost:63342/mapbox-gl-js/data/Taiwan_Railway/{z}/{x}/{y}.pbf"],
+            },
+            "source-layer": "Taiwan_Railway",
+            layout: {
+                'line-cap': 'round',
+                'line-join': 'round',
+            },
+            paint: {
+                'line-color': '#fff',
+                'line-width': {
+                    stops: [
+                        [3, 0.5],
+                        [11, 2],
+                        [22, 3],
+                    ],
+                },
+                'line-dasharray': [2, 7],
+            },
+        });
+    });
+
+</script>
+
+</body>
+
+</html>
