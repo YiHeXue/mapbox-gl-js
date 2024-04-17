@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Mapbox PBF数据加载</title>
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <link rel='stylesheet' href='../dist/mapbox-gl.css' />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body,
+        #map {
+            height: 100%;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id='map'></div>
+
+    <script src='../dist/mapbox-gl-dev.js'></script>
+    <script src='../debug/access_token_generated.js'></script>
+    <script>
+        var map = new mapboxgl.Map({
+            container: 'map',
+            devtools: true,
+            style: 'mapbox://styles/mapbox/satellite-v9',
+            zoom: 6.5,
+            center: [121.564427,25.033671],
+            // pitch: 75
+        });
+
+        //加载图标
+        map.loadImage('../data/1.png', function (error, image) {
+            if (error) throw error
+            map.addImage('bubbleIcon', image, { sdf: true })
+        })
+
+        map.on('style.load', function () {
+            map.addLayer({
+                "id": "park",
+                "type": "symbol",
+                "source": {
+                    type: 'vector',
+                    tiles: ["http://localhost:63342/mapbox-gl-js/data/Taiwan_POI_Features/{z}/{x}/{y}.pbf"],
+                },
+                "source-layer": "Taiwan_POI_Features",
+                'layout': {
+                    'icon-image': 'bubbleIcon',
+                    'icon-size':0.05,
+                    'text-field': ['get', 'name'],
+                    'text-font': ['Open Sans Bold'],
+                    'text-size': 12,
+                    'text-offset': [0, 1.5] // 将文本向上偏移
+                },
+                "paint": {
+                    'text-color': '#fff',
+                    'icon-color': '#0f0'
+                }
+            });
+        });
+    </script>
+
+</body>
+
+</html>
