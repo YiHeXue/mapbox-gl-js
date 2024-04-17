@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Mapbox PBF数据加载</title>
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <link rel='stylesheet' href='../dist/mapbox-gl.css' />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body,
+        #map {
+            height: 100%;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id='map'></div>
+
+    <script src='../dist/mapbox-gl-dev.js'></script>
+    <script src='../debug/access_token_generated.js'></script>
+    <script>
+        var map = new mapboxgl.Map({
+            container: 'map',
+            devtools: true,
+            style: 'mapbox://styles/mapbox/satellite-v9',
+            zoom: 8,
+            center: [100.4777412650003,36.76120142500015],
+            // pitch: 75
+        });
+
+        map.on('style.load', function () {
+            map.addLayer({
+                "id": "easffd",
+                "type": "line",
+                "source": {
+                    type: 'vector',
+                    // tiles: ["http://localhost:63342/mapbox-gl-js/data/q3/{z}/{x}/{y}.pbf"],
+                    tiles: ["http://localhost:63342/mapbox-gl-js/data/pp/{z}/{x}/{y}.pbf"],
+                },
+                "source-layer": "lake",
+                'layout': {},
+                'paint': {
+                    'line-color': '#f00',
+                    'fill-opacity': 0.5
+                }
+            });
+        });
+    </script>
+
+</body>
+
+</html>
