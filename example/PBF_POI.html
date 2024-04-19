@@ -4,7 +4,7 @@
 <html>
 
 <head>
-    <title>Mapbox PBF数据加载</title>
+    <title>Mapbox POI数据加载</title>
     <meta charset='utf-8'>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <link rel='stylesheet' href='../dist/mapbox-gl.css' />
@@ -39,11 +39,14 @@
         });
 
         //加载图标
-        map.loadImage('../data/clothes.png', function (error, image) {
+        map.loadImage('../data/icons/医院.png', function (error, image) {
             if (error) throw error
-            // map.addImage('clothes', image, { sdf: true })//修改颜色设置为true
-            map.addImage('clothes', image)
+            map.addImage('医院', image, { sdf: true })
+        })
 
+        map.loadImage('../data/icons/超市.png', function (error, image) {
+            if (error) throw error
+            map.addImage('超市', image, { sdf: true })
         })
 
         map.on('style.load', function () {
@@ -56,7 +59,7 @@
                 },
                 "source-layer": "Taiwan_POI_Features",
                 'layout': {
-                    'icon-image': 'clothes',
+                    'icon-image': '医院',
                     'icon-size':0.05,
                     'text-field': ['get', 'name'],
                     'text-font': ['Open Sans Bold'],
