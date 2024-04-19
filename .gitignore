@@ -33,3 +33,6 @@ npm-debug.log
 .idea
 # https://github.com/vitejs/vite/issues/9470
 vitest.config.js.*
+data/Taiwan_Complex
+data/Taiwan_POI
+data/china
