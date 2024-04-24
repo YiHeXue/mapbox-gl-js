@@ -19,16 +19,31 @@
         #map {
             height: 100%;
         }
+        #btn {
+            position: absolute;
+            top: 50px;
+            left: 50px;
+        }
     </style>
 </head>
 
 <body>
 
 <div id='map'></div>
-
+<div id="btn">
+    <button onclick="visible()">visible</button>
+</div>
 <script src='../dist/mapbox-gl-dev.js'></script>
 <script src='../debug/access_token_generated.js'></script>
 <script>
+
+    function visible() {
+        const name ='railWay';
+        const isVisible = map.getLayoutProperty(name, 'visibility') === 'visible';
+        map.setLayoutProperty(name, 'visibility', isVisible ? 'none' : 'visible');
+    }
+
+
     var map = new mapboxgl.Map({
         container: 'map',
         devtools: true,
@@ -39,7 +54,7 @@
 
     map.on('style.load', function () {
         map.addLayer({
-            "id": "park",
+            "id": "railWay",
             "type": "line",
             "source": {
                 type: 'vector',
