@@ -32,6 +32,7 @@
 <div id='map'></div>
 <div id="btn">
     <button onclick="visible()">visible</button>
+    <button onclick="hide()">hide</button>
 </div>
 <script src='../dist/mapbox-gl-dev.js'></script>
 <script src='../debug/access_token_generated.js'></script>
@@ -39,15 +40,26 @@
 
     function visible() {
         const name ='railWay';
-        const isVisible = map.getLayoutProperty(name, 'visibility') === 'visible';
-        map.setLayoutProperty(name, 'visibility', isVisible ? 'none' : 'visible');
+        // const isVisible = map.getLayoutProperty(name, 'visibility') === 'visible';
+        // map.setLayoutProperty(name, 'visibility', isVisible ? 'none' : 'visible');
+        map.setLayoutProperty(name, 'visibility', 'visible');
+    }
+    function hide() {
+        const name ='railWay';
+        // const isVisible = map.getLayoutProperty(name, 'visibility') === 'visible';
+        map.setLayoutProperty(name, 'visibility', 'none');
     }
 
 
     var map = new mapboxgl.Map({
         container: 'map',
         devtools: true,
-        style: 'mapbox://styles/mapbox/satellite-v9',
+        // style: 'mapbox://styles/mapbox/satellite-v9',
+        style: {
+            "version": 8,
+            "sources": {},
+            "layers": [],
+        },
         zoom: 6.5,
         center: [121.564427,25.033671],
     });
@@ -66,7 +78,7 @@
                 'line-join': 'round',
             },
             paint: {
-                'line-color': '#fff',
+                'line-color': '#f00',
                 'line-width': {
                     stops: [
                         [3, 0.5],
