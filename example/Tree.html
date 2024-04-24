@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Mapbox 图层管理</title>
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <link rel='stylesheet' href='../dist/mapbox-gl.css' />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body,
+        #map {
+            height: 100%;
+        }
+
+        #ml-panel-tree1 {
+            height: 500px !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div id='map'></div>
+    <script src='../dist/mapbox-gl-dev.js'></script>
+    <script src='../debug/access_token_generated.js'></script>
+    <script src="./lib/mapbox-layerswitcher.js"></script>
+    <script>
+        var map = new mapboxgl.Map({
+            container: 'map',
+            devtools: true,
+            center: [116.39, 39.91],
+            projection: 'globe', // Display the map as a globe, since satellite-v9 defaults to Mercator
+            style: 'mapbox://styles/mapbox/streets-v11',
+            zoom: 4,
+            // pitch: 75
+        });
+
+        map.on('style.load', function () {
+            // map.addLayer({
+            //     "id": "lake",
+            //     "type": "fill",
+            //     "source": {
+            //         type: 'vector',
+            //         tiles: ["http://localhost:63342/mapbox-gl-js/data/lake/{z}/{x}/{y}.pbf"],
+            //     },
+            //     "source-layer": "lake",
+            //     'layout': {},
+            //     'paint': {
+            //         'fill-color': '#f00',
+            //         'fill-opacity': 0.5
+            //     }
+            // });
+
+            map.addSource('country-borders1', {
+                'type': 'geojson',
+                'data': '../data/china.json'
+            });
+            map.addLayer({
+                'id': 'country-borders',
+                'type': 'line',
+                'source': 'country-borders1',
+                'layout': {
+                    'visibility': 'visible',
+                },
+                'paint': {
+                    'line-color': '#f00',
+                }
+            });
+        });
+
+        //图层树
+        var customLayers = [
+            {
+                id: "DXLine",
+                name: "地形线",
+                children: [
+                    {
+                        id: "contours",
+                        name: "地形线"
+                    }
+                ]
+            },
+            {
+                id: "Geojson",
+                name: "Geojson",
+                children: [
+                    {
+                        id: "country-borders",
+                        name: "China"
+                    }
+                ]
+            },
+            {
+                id: "streetslayers",
+                name: "streets图层组",
+                children: []
+            },
+            {
+                id: "mapbox://styles/mapbox/light-v10",
+                name: "light",
+                type: "base"
+            },
+            {
+                id: "mapbox://styles/mapbox/dark-v10",
+                name: "dark",
+                type: "base"
+            },
+            {
+                id: "mapbox://styles/mapbox/outdoors-v11",
+                name: "outdoors",
+                type: "base"
+            },
+            {
+                id: "mapbox://styles/mapbox/satellite-v9",
+                name: "satellite",
+                type: "base"
+            },
+            {
+                id: "mapbox://styles/mapbox/streets-v11",
+                name: "streets",
+                type: "base"
+            }
+        ];
+        map.on('load', () => {
+            // console.log('Map loaded!');
+            //style.load事件先于load事件
+
+            //定位到 ID 为 "streetslayers" 的图层组
+            const customLayersGroup = customLayers.find(item => item.id === "streetslayers");
+
+            if (customLayersGroup) {
+                //获取map当前style中的所有图层
+                const layers = map.getStyle().layers;
+
+                // 遍历 streets Style所有图层
+                layers.forEach(layer => {
+                    if (layer.id !== 'contours' && layer.id !== 'country-borders') {
+                        customLayersGroup.children.push({
+                            id: layer.id,
+                            name: layer.id // 如果需要使用不同的名称，可以根据实际情况进行调整
+                        });
+                    }
+                });
+            } else {
+                console.error("customLayersGroup not found.");
+            }
+
+
+
+            //创建图层管理器
+            let layerswitcher = new MapboxLayerSwitcher({
+                layers: customLayers,
+                template: 'tree1',
+                activemode: 'mouseover'
+            });
+            //向map中添加图层管理器
+            map.addControl(layerswitcher, "top-left");
+        });
+
+    </script>
+
+</body>
+
+</html>
