@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Mapbox 查询元素</title>
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <link rel='stylesheet' href='../dist/mapbox-gl.css' />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body,
+        #map {
+            height: 100%;
+        }
+
+        #btn {
+            position: absolute;
+            top: 50px;
+            left: 50px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id='map'></div>
+    <div id="btn">
+        <button onclick="test()">测试</button>
+    </div>
+    <script src='../dist/mapbox-gl-dev.js'></script>
+    <script src='../debug/access_token_generated.js'></script>
+    <script>
+        function test() {
+            // 查询数据源中的要素
+            // Convert LatLng coordinates to screen pixel and only query the rendered features.
+            const point = new mapboxgl.Point(111.48, 31.22);
+            let pixelPos = map.projection.toScreenLocation(point);
+            let features = map.queryRenderedFeatures(pixelPos);
+
+            // Get the first feature within the list if one exist
+            if (features.size > 0) {
+                const feature = features[0]
+
+                // 创建高亮图层
+                map.addLayer({
+                    id: 'highlight-layer',
+                    type: 'circle', // 根据元素类型选择合适的图层类型
+                    source: {
+                        type: 'geojson',
+                        data: {
+                            type: 'FeatureCollection',
+                            features: [feature]
+                        }
+                    },
+                    paint: {
+                        'circle-radius': 15, // 点半径
+                        'circle-color': '#00f' // 点颜色
+                    }
+                });
+
+
+
+            }
+                debugger
+
+
+        }
+
+         map = new mapboxgl.Map({
+            container: 'map',
+            devtools: true,
+            style: 'mapbox://styles/mapbox/satellite-v9',
+            zoom: 4,
+            center: [120.4777412650003,36.76120142500015],
+            // pitch: 75
+        });
+
+        map.on('style.load', function () {
+            map.addSource('earthquakes', {
+                type: 'geojson',
+                // Use a URL for the value for the `data` property.
+                data: {
+                    "type": "FeatureCollection",
+                    "features": [
+                        {
+                            "type": "Feature",
+                            "properties": {
+                                "id":1,
+                                "title": "My Marker",
+                                "icon-color": "#ff0000",
+                            },
+                            "geometry": {
+                                "type": "Point",
+                                "coordinates": [111.48, 31.22]
+                            }
+                        },
+                        {
+                            "type": "Feature",
+                            "properties": {
+                                "id":2,
+                                "title": "My Marker",
+                                "icon-color": "#ffff00",
+                            },
+                            "geometry": {
+                                "type": "Point",
+                                "coordinates": [121.48, 28.22]
+                            }
+                        },
+                        {
+                            "type": "Feature",
+                            "properties": {
+                                "id":3,
+                                "title": "My Marker",
+                                "icon-color": "#00aaff",
+                            },
+                            "geometry": {
+                                "type": "Point",
+                                "coordinates": [121.48, 35.22]
+                            }
+                        }
+                    ]
+                }
+
+            });
+
+            map.addLayer({
+                'id': 'earthquakes-layer',
+                'type': 'circle',
+                'source': 'earthquakes',
+                'paint': {
+                    'circle-radius': 20, // 点半径
+                    'circle-color': '#0ff' // 点颜色
+                }
+            });
+
+
+
+
+
+        });
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Mapbox PBF数据加载</title>
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <link rel='stylesheet' href='../dist/mapbox-gl.css'/>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body,
+        #map {
+            height: 100%;
+        }
+        #btn {
+            position: absolute;
+            top: 50px;
+            left: 50px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div id='map'></div>
+<div id="btn">
+    <button onclick="visible()">visible</button>
+    <button onclick="hide()">hide</button>
+</div>
+<script src='../dist/mapbox-gl-dev.js'></script>
+<script src='../debug/access_token_generated.js'></script>
+<script>
+
+    function visible() {
+        const name ='china';
+        // const isVisible = map.getLayoutProperty(name, 'visibility') === 'visible';
+        // map.setLayoutProperty(name, 'visibility', isVisible ? 'none' : 'visible');
+        map.setLayoutProperty(name, 'visibility', 'visible');
+    }
+    function hide() {
+        const name ='china';
+        // const isVisible = map.getLayoutProperty(name, 'visibility') === 'visible';
+        map.setLayoutProperty(name, 'visibility', 'none');
+    }
+
+
+    var map = new mapboxgl.Map({
+        container: 'map',
+        devtools: true,
+        // style: 'mapbox://styles/mapbox/satellite-v9',
+        projection: 'globe', // Display the map as a globe, since satellite-v9 defaults to Mercator
+        style: {
+            "version": 8,
+            "sources": {},
+            "layers": [],
+        },
+        zoom: 6.5,
+        center: [121.564427,25.033671],
+    });
+
+    map.on('style.load', function () {
+        // map.addLayer({
+        //     "id": "railWay",
+        //     "type": "line",
+        //     "source": {
+        //         type: 'vector',
+        //         tiles: ["http://localhost:63342/mapbox-gl-js/data/Taiwan_Railway/{z}/{x}/{y}.pbf"],
+        //     },
+        //     "source-layer": "Taiwan_Railway",
+        //     layout: {
+        //         'line-cap': 'round',
+        //         'line-join': 'round',
+        //     },
+        //     paint: {
+        //         'line-color': '#f00',
+        //         'line-width': {
+        //             stops: [
+        //                 [3, 0.5],
+        //                 [11, 2],
+        //                 [22, 3],
+        //             ],
+        //         },
+        //         'line-dasharray': [2, 7],
+        //     },
+        // });
+        map.addLayer({
+            "id": "china",
+            "type": "fill",
+            "source": {
+                type: 'vector',
+                // tiles: ["http://localhost:63342/Runtime/plugins/EarthMapbox/data/china/{z}/{x}/{y}.pbf"],
+                tiles: ["http://localhost:63342/Runtime/plugins/EarthMapbox/data/allCountry/{z}/{x}/{y}.pbf"],
+            },
+            // "source-layer": "china",
+            "source-layer": "allCountriesGeojson",
+            'layout': {},
+            'paint': {
+                'fill-color': '#0ff',
+                // "fill-color": [
+                //     "case",
+                //     ["==", ["zoom"], 5], "#f00",
+                //     [">=", ["zoom"], 6], ["<=", ["zoom"], 9], "#ff0",
+                //     [">=", ["zoom"], 10], ["<=", ["zoom"], 13], "#fff",
+                //     /* 其他缩放级别范围 */
+                //     "#00f"  // 默认颜色值
+                // ],
+                // 'fill-opacity':1
+            }
+        });
+    });
+
+</script>
+
+</body>
+
+</html>
