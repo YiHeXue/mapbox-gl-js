@@ -181,7 +181,8 @@ const map = new mapboxgl.Map({
 map.on('load', () => {
     map.addSource('raster-array-source', {
         'type': 'raster-array',
-        'url' : 'http://localhost:9967/debug/wind-512-mrt/tile.json'
+        // 'url' : 'http://localhost:9967/debug/wind-512-mrt/tile.json'
+        'url' : 'http://localhost:63342/mapbox-gl-js/debug/wind-512-mrt/tile.json'
     });
 
     map.addLayer({

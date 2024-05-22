@@ -1,6 +1,6 @@
 {
     "tiles": [
-        "http://localhost:9967/debug/wind-512-mrt/{z}/{x}/{y}.mrt"
+        "http://localhost:63342/mapbox-gl-js/debug/wind-512-mrt/{z}/{x}/{y}.mrt"
     ],
     "raster_layers": [
         {
