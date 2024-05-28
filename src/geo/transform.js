@@ -233,6 +233,7 @@ class Transform {
         this.globeRadius = 0;
         this.globeCenterInViewSpace = [0, 0, 0];
         this._tileCoverLift = 0;
+        this.freezeTileCoverage = false;
 
         // Move the horizon closer to the center. 0 would not shift the horizon. 1 would put the horizon at the center.
         this._horizonShift = 0.1;
@@ -273,7 +274,7 @@ class Transform {
         return this.projection.name !== 'globe' && this._orthographicProjectionAtLowPitch && this.pitch < OrthographicPitchTranstionValue;
     }
     get elevation(): ?Elevation { return this._elevation; }
-    set elevation(elevation: ?Elevation) {
+    set elevation(elevation: Elevation | null | void) {
         if (this._elevation === elevation) return;
         this._elevation = elevation;
         this._updateCameraOnTerrain();
@@ -370,7 +371,7 @@ class Transform {
     get renderWorldCopies(): boolean {
         return this._renderWorldCopies && this.projection.supportsWorldCopies === true;
     }
-    set renderWorldCopies(renderWorldCopies?: ?boolean) {
+    set renderWorldCopies(renderWorldCopies: ?boolean | void) {
         if (renderWorldCopies === undefined) {
             renderWorldCopies = true;
         } else if (renderWorldCopies === null) {

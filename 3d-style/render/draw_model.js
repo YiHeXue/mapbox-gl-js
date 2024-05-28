@@ -148,11 +148,12 @@ function drawMesh(sortedMesh: SortedMesh, painter: Painter, layer: ModelStyleLay
     mat4.transpose(normalMatrix, normalMatrix);
 
     const emissiveStrength = layer.paint.get('model-emissive-strength').constantOr(0.0);
-
     const uniformValues = modelUniformValues(
         new Float32Array(sortedMesh.worldViewProjection),
         new Float32Array(lightingMatrix),
         new Float32Array(normalMatrix),
+        /* $FlowIgnore[incompatible-call] we can safely pass null for node.matrix as it is handled in the modelUniformValues constructor */
+        null,
         painter,
         opacity,
         pbr.baseColorFactor,
@@ -210,12 +211,13 @@ function drawMesh(sortedMesh: SortedMesh, painter: Painter, layer: ModelStyleLay
 }
 
 export function prepare(layer: ModelStyleLayer, sourceCache: SourceCache, painter: Painter) {
-    const scope = layer.scope;
     const modelSource = sourceCache.getSource();
     if (!modelSource.loaded()) return;
     if (modelSource.type === 'vector' || modelSource.type === 'geojson') {
+        const scope = modelSource.type === 'vector' ? layer.scope : "";
         if (painter.modelManager) {
             // Do it here, to prevent modelManager handling in Painter.
+            // geojson models are always set in the root scope to avoid model duplication
             painter.modelManager.upload(painter, scope);
         }
         return;
@@ -327,7 +329,8 @@ function drawModels(painter: Painter, sourceCache: SourceCache, layer: ModelStyl
     }
 
     if (modelSource.type === 'vector' || modelSource.type === 'geojson') {
-        drawInstancedModels(painter, sourceCache, layer, coords);
+        const scope = modelSource.type === 'vector' ? layer.scope : "";
+        drawVectorLayerModels(painter, sourceCache, layer, coords, scope);
         cleanup();
         return;
     }
@@ -509,7 +512,7 @@ function calculateTileZoom(id: OverscaledTileID, tr: Transform): number {
     return tr._zoomFromMercatorZ(Math.sqrt(distx * distx + disty * disty + distz * distz));
 }
 
-function drawInstancedModels(painter: Painter, source: SourceCache, layer: ModelStyleLayer, coords: Array<OverscaledTileID>) {
+function drawVectorLayerModels(painter: Painter, source: SourceCache, layer: ModelStyleLayer, coords: Array<OverscaledTileID>, scope: string) {
     const tr = painter.transform;
     if (tr.projection.name !== 'mercator') {
         warnOnce(`Drawing 3D models for ${tr.projection.name} projection is not yet implemented`);
@@ -521,7 +524,9 @@ function drawInstancedModels(painter: Painter, source: SourceCache, layer: Model
     const modelManager = painter.modelManager;
     layer.modelManager = modelManager;
     const shadowRenderer = painter.shadowRenderer;
-    if (!layer._unevaluatedLayout._values.hasOwnProperty('model-id')) return;
+
+    if (!layer._unevaluatedLayout._values.hasOwnProperty('model-id')) { return; }
+
     const modelIdUnevaluatedProperty = layer._unevaluatedLayout._values['model-id'];
     const evaluationParameters = {...layer.layout.get("model-id").parameters};
 
@@ -529,6 +534,13 @@ function drawInstancedModels(painter: Painter, source: SourceCache, layer: Model
         const tile = source.getTile(coord);
         const bucket: ?ModelBucket = (tile.getBucket(layer): any);
         if (!bucket || bucket.projection.name !== tr.projection.name) continue;
+        const modelUris = bucket.getModelUris();
+        if (modelUris && !bucket.modelsRequested) {
+            // geojson models are always set in the root scope to avoid model duplication
+            modelManager.addModelsFromBucket(modelUris, scope);
+            bucket.modelsRequested = true;
+        }
+
         const tileZoom = calculateTileZoom(coord, tr);
         evaluationParameters.zoom = tileZoom;
         const modelIdProperty = modelIdUnevaluatedProperty.possiblyEvaluate(evaluationParameters);
@@ -562,8 +574,10 @@ function drawInstancedModels(painter: Painter, source: SourceCache, layer: Model
             if (modelInstances.features.length > 0) {
                 modelId = modelIdProperty.evaluate(modelInstances.features[0].feature, {});
             }
-            const model = modelManager.getModel(modelId, layer.scope);
+
+            const model = modelManager.getModel(modelId, scope);
             if (!model || !model.uploaded) continue;
+
             for (const node of model.nodes) {
                 drawInstancedNode(painter, layer, node, modelInstances, cameraPos, coord, renderData);
             }
@@ -574,8 +588,6 @@ function drawInstancedModels(painter: Painter, source: SourceCache, layer: Model
 const minimumInstanceCount = 20;
 
 function drawInstancedNode(painter: Painter, layer: ModelStyleLayer, node: Node, modelInstances: any, cameraPos: [number, number, number], coord: OverscaledTileID, renderData: RenderData) {
-
-    // console.log(`LAYER: ${JSON.stringify(layer.paint.get('model-scale'))}`);
     const context = painter.context;
     const isShadowPass = painter.renderPass === 'shadow';
     const shadowRenderer = painter.shadowRenderer;
@@ -610,11 +622,12 @@ function drawInstancedNode(painter: Painter, layer: ModelStyleLayer, node: Node,
                 const layerOpacity = layer.paint.get('model-opacity');
 
                 const emissiveStrength = layer.paint.get('model-emissive-strength').constantOr(0.0);
-
                 uniformValues = modelUniformValues(
                     coord.expandedProjMatrix,
                     Float32Array.from(node.matrix),
                     new Float32Array(16),
+                    /* $FlowIgnore[incompatible-call] we can safely pass null for node.matrix as it is handled in the modelUniformValues constructor */
+                    null,
                     painter,
                     layerOpacity,
                     pbr.baseColorFactor,
@@ -761,36 +774,42 @@ function drawBatchedModels(painter: Painter, source: SourceCache, layer: ModelSt
                     continue;
                 }
 
-                const isLightBeamPass = painter.renderPass === 'light-beam';
-
-                const modelMatrix = [...tileMatrix];
+                const tileModelMatrix = [...tileMatrix];
 
                 const anchorX = node.anchor ? node.anchor[0] : 0;
                 const anchorY = node.anchor ? node.anchor[1] : 0;
 
-                mat4.translate(modelMatrix, modelMatrix, [anchorX * (scale[0] - 1),
+                mat4.translate(tileModelMatrix, tileModelMatrix, [anchorX * (scale[0] - 1),
                     anchorY * (scale[1] - 1),
                     elevation]);
                 /* $FlowIgnore[incompatible-call] scale should always be an array */
                 if (!vec3.exactEquals(scale, DefaultModelScale)) {
                     /* $FlowIgnore[incompatible-call] scale should always be an array */
-                    mat4.scale(modelMatrix, modelMatrix, scale);
+                    mat4.scale(tileModelMatrix, tileModelMatrix, scale);
                 }
+                // keep model and nodemodel matrices separate for rendering door lights
+                const nodeModelMatrix = mat4.multiply([], tileModelMatrix, node.matrix);
 
-                mat4.multiply(modelMatrix, modelMatrix, node.matrix);
-
-                const lightingMatrix = mat4.multiply([], zScaleMatrix, modelMatrix);
+                let lightingMatrix = mat4.multiply([], zScaleMatrix, tileModelMatrix);
                 mat4.multiply(lightingMatrix, negCameraPosMatrix, lightingMatrix);
                 const normalMatrix = mat4.invert([], lightingMatrix);
                 mat4.transpose(normalMatrix, normalMatrix);
                 mat4.scale(normalMatrix, normalMatrix, normalScale);
 
-                const worldViewProjection = mat4.multiply([], tr.expandedFarZProjMatrix, modelMatrix);
+                // lighting matrix should take node.matrix into account
+                lightingMatrix = mat4.multiply(lightingMatrix, lightingMatrix, node.matrix);
+
+                const isLightBeamPass = painter.renderPass === 'light-beam';
+                const wpvForNode = mat4.multiply([], tr.expandedFarZProjMatrix, nodeModelMatrix);
+                // Lights come in tilespace so wvp should not include node.matrix when rendering door ligths
+                const wpvForTile = mat4.multiply([], tr.expandedFarZProjMatrix, tileModelMatrix);
                 const hasMapboxFeatures = modelTraits & ModelTraits.HasMapboxMeshFeatures;
                 const emissiveStrength = hasMapboxFeatures ? 0.0 : nodeInfo.evaluatedRMEA[0][2];
+
                 for (let i = 0; i < node.meshes.length; ++i) {
                     const mesh = node.meshes[i];
                     const isLight = i === node.lightMeshIndex;
+                    let worldViewProjection = wpvForNode;
                     if (isLight) {
                         if (!isLightBeamPass && !painter.terrain && painter.shadowRenderer) {
                             if (painter.currentLayer < painter.firstLightBeamLayer) {
@@ -798,6 +817,8 @@ function drawBatchedModels(painter: Painter, source: SourceCache, layer: ModelSt
                             }
                             continue;
                         }
+                        // Lights come in tilespace
+                        worldViewProjection = wpvForTile;
                     } else if (isLightBeamPass) {
                         continue;
                     }
@@ -824,13 +845,13 @@ function drawBatchedModels(painter: Painter, source: SourceCache, layer: ModelSt
                     }
 
                     if (isShadowPass) {
-                        drawShadowCaster(mesh, modelMatrix, painter, layer);
+                        drawShadowCaster(mesh, nodeModelMatrix, painter, layer);
                         continue;
                     }
 
                     let fogMatrixArray = null;
                     if (fog) {
-                        const fogMatrix = fogMatrixForModel(modelMatrix, painter.transform);
+                        const fogMatrix = fogMatrixForModel(nodeModelMatrix, painter.transform);
                         fogMatrixArray = new Float32Array(fogMatrix);
 
                         if (tr.projection.name !== 'globe') {
@@ -857,10 +878,12 @@ function drawBatchedModels(painter: Painter, source: SourceCache, layer: ModelSt
                     const program = painter.getOrCreateProgram('model', programOptions);
 
                     if (!isShadowPass && shadowRenderer) {
-                        shadowRenderer.setupShadowsFromMatrix(modelMatrix, program, shadowRenderer.useNormalOffset);
+                        // The shadow matrix does not need to include node transforms,
+                        // as shadow_pos will be performing that transform in the shader
+                        shadowRenderer.setupShadowsFromMatrix(tileModelMatrix, program, shadowRenderer.useNormalOffset);
                     }
 
-                    painter.uploadCommonUniforms(context, program, coord.toUnwrapped(), fogMatrixArray);
+                    painter.uploadCommonUniforms(context, program, null, fogMatrixArray);
 
                     const pbr = material.pbrMetallicRoughness;
                     // These values were taken from the tilesets used for testing
@@ -872,6 +895,7 @@ function drawBatchedModels(painter: Painter, source: SourceCache, layer: ModelSt
                             new Float32Array(worldViewProjection),
                             new Float32Array(lightingMatrix),
                             new Float32Array(normalMatrix),
+                            new Float32Array(node.matrix),
                             painter,
                             layerOpacity,
                             pbr.baseColorFactor,

@@ -18,7 +18,13 @@ in highp vec4 a_packed;
 #endif
 in float a_linesofar;
 
+#ifdef LINE_JOIN_NONE
+in vec2 a_pattern_data; // [position_in_segment & offset_sign, segment_length];
+out vec2 v_pattern_data; // [position_in_segment, segment_length]
+#endif
+
 uniform mat4 u_matrix;
+uniform mediump float u_tile_units_to_pixels;
 uniform vec2 u_units_to_pixels;
 uniform mat2 u_pixels_to_tile_units;
 uniform lowp float u_device_pixel_ratio;
@@ -110,6 +116,16 @@ void main() {
     v_linesofar = a_linesofar;
     v_width2 = vec2(outset, inset);
     v_width = floorwidth;
+
+#ifdef LINE_JOIN_NONE
+    // Needs to consider antialiasing width extension to get accurate pattern aspect ratio
+    v_width += ANTIALIASING;
+    // Offset caused by vertices extended forward or backward from line point
+    float offset_sign = (fract(a_pattern_data.x) - 0.5) * 4.0;
+    float line_progress_offset = offset_sign * v_width * 0.5 / u_tile_units_to_pixels;
+    v_linesofar += line_progress_offset;
+    v_pattern_data = vec2(a_pattern_data.x + line_progress_offset, a_pattern_data.y);
+#endif
 
 #ifdef FOG
     v_fog_pos = fog_position(pos);

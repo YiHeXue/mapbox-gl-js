@@ -112,7 +112,7 @@ export const operationHandlers = {
     setStyle(map, params, doneCb) {
         // Disable local ideograph generation (enabled by default) for
         // consistent local ideograph rendering using fixtures in all runs of the test suite.
-        map.setStyle(params[0], {localIdeographFontFamily: false});
+        map.setStyle(params[0], {localIdeographFontFamily: false, ...params[1]});
         doneCb();
     },
     pauseSource(map, params, doneCb) {
@@ -191,6 +191,10 @@ export const operationHandlers = {
                 throw new Error(params[3]);
             }
         }
+        doneCb();
+    },
+    updateGeoJSONData(map, [sourceId, data], doneCb) {
+        map.getSource(sourceId).updateData(data);
         doneCb();
     }
 };

@@ -9,7 +9,7 @@ import LngLat from '../../geo/lng_lat.js';
 import throttle from '../../util/throttle.js';
 import {mercatorZfromAltitude} from '../../geo/mercator_coordinate.js';
 
-import type Map from '../map.js';
+import type {Map} from '../map.js';
 import type {AnimationOptions, CameraOptions} from '../camera.js';
 
 type Options = {
@@ -108,7 +108,7 @@ class GeolocateControl extends Evented {
     _noTimeout: boolean;
     _supportsGeolocation: boolean;
 
-    constructor(options: $Shape<Options>) {
+    constructor(options?: $Shape<Options>) {
         super();
         const geolocation = navigator.geolocation;
         this.options = extend({geolocation}, defaultOptions, options);

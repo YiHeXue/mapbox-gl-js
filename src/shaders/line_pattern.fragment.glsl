@@ -3,7 +3,7 @@
 
 uniform lowp float u_device_pixel_ratio;
 uniform vec2 u_texsize;
-uniform float u_tile_units_to_pixels;
+uniform mediump float u_tile_units_to_pixels;
 uniform highp vec2 u_trim_offset;
 
 uniform sampler2D u_image;
@@ -17,6 +17,9 @@ in float v_width;
 in highp vec4 v_uv;
 #endif
 
+#ifdef LINE_JOIN_NONE
+in vec2 v_pattern_data; // [pos_in_segment, segment_length];
+#endif
 
 #pragma mapbox: define lowp vec4 pattern
 #pragma mapbox: define lowp float pixel_ratio
@@ -78,6 +81,24 @@ void main() {
         if (line_progress <= trim_end && line_progress >= trim_start) {
             color = vec4(0, 0, 0, 0);
         }
+    }
+#endif
+
+#ifdef LINE_JOIN_NONE
+    // v_pattern_data = { x = pos_in_segment, y = segment_length }
+    // v_linesofar and v_pattern_data.x is offset in vertex shader based on segment overlap (v_pattern_data.x can be
+    // negative). v_pattern_data.y is not modified because we can't access overlap info for other end of the segment.
+    // All units are tile units.
+    // Distance from segment start point to start of first pattern instance
+    float pattern_len = pattern_size.x / aspect;
+    float segment_phase = pattern_len - mod((v_linesofar - v_pattern_data.x), pattern_len);
+    // Step is used to check if we can fit an extra pattern cycle when considering the segment overlap at the corner
+    float visible_start = segment_phase - step(pattern_len * 0.5, segment_phase) * pattern_len;
+    float visible_end = floor((v_pattern_data.y - segment_phase) / pattern_len) * pattern_len + segment_phase;
+    visible_end += step(pattern_len * 0.5, v_pattern_data.y - visible_end) * pattern_len;
+
+    if (v_pattern_data.x < visible_start || v_pattern_data.x >= visible_end) {
+        color = vec4(0.0);
     }
 #endif
 

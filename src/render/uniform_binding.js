@@ -2,11 +2,21 @@
 
 import Color from '../style-spec/util/color.js';
 import type Context from '../gl/context.js';
+import type {ObjMap} from '../types/obj-map.js';
 
 export type UniformValues<Us: Object>
-    = $Exact<$ObjMap<Us, <V>(u: Uniform<V>) => V>>;
+    = $Exact<ObjMap<Us, <V>(u: IUniform<V>) => V>>;
 
-class Uniform<T> {
+export interface IUniform<T> {
+    gl: WebGL2RenderingContext;
+    location: WebGLUniformLocation | null | void;
+    current: T;
+    initialized: boolean;
+    fetchUniformLocation(program: WebGLProgram, name: string): boolean;
+    set(program: WebGLProgram, name: string, v: T): void;
+}
+
+class Uniform<T> implements IUniform<T> {
     gl: WebGL2RenderingContext;
     location: ?WebGLUniformLocation;
     current: T;
@@ -25,16 +35,17 @@ class Uniform<T> {
         return !!this.location;
     }
 
-    +set: (program: WebGLProgram, name: string, v: T) => void;
+    set(_program: WebGLProgram, _name: string, _v: T): void {
+        throw new Error('Uniform#set() must be implemented by each concrete Uniform');
+    }
 }
 
-class Uniform1i extends Uniform<number> {
+class Uniform1i extends Uniform<number> implements IUniform<number> {
     constructor(context: Context) {
         super(context);
         this.current = 0;
     }
 
-    // $FlowFixMe[method-unbinding]
     set(program: WebGLProgram, name: string, v: number): void {
         if (!this.fetchUniformLocation(program, name)) return;
         if (this.current !== v) {
@@ -44,13 +55,12 @@ class Uniform1i extends Uniform<number> {
     }
 }
 
-class Uniform1f extends Uniform<number> {
+class Uniform1f extends Uniform<number> implements IUniform<number> {
     constructor(context: Context) {
         super(context);
         this.current = 0;
     }
 
-    // $FlowFixMe[method-unbinding]
     set(program: WebGLProgram, name: string, v: number): void {
         if (!this.fetchUniformLocation(program, name)) return;
         if (this.current !== v) {
@@ -60,13 +70,12 @@ class Uniform1f extends Uniform<number> {
     }
 }
 
-class Uniform2f extends Uniform<[number, number]> {
+class Uniform2f extends Uniform<[number, number]> implements IUniform<[number, number]> {
     constructor(context: Context) {
         super(context);
         this.current = [0, 0];
     }
 
-    // $FlowFixMe[method-unbinding]
     set(program: WebGLProgram, name: string, v: [number, number]): void {
         if (!this.fetchUniformLocation(program, name)) return;
         if (v[0] !== this.current[0] || v[1] !== this.current[1]) {
@@ -76,13 +85,12 @@ class Uniform2f extends Uniform<[number, number]> {
     }
 }
 
-class Uniform3f extends Uniform<[number, number, number]> {
+class Uniform3f extends Uniform<[number, number, number]> implements IUniform<[number, number, number]> {
     constructor(context: Context) {
         super(context);
         this.current = [0, 0, 0];
     }
 
-    // $FlowFixMe[method-unbinding]
     set(program: WebGLProgram, name: string, v: [number, number, number]): void {
         if (!this.fetchUniformLocation(program, name)) return;
         if (v[0] !== this.current[0] || v[1] !== this.current[1] || v[2] !== this.current[2]) {
@@ -92,13 +100,12 @@ class Uniform3f extends Uniform<[number, number, number]> {
     }
 }
 
-class Uniform4f extends Uniform<[number, number, number, number]> {
+class Uniform4f extends Uniform<[number, number, number, number]> implements IUniform<[number, number, number, number]> {
     constructor(context: Context) {
         super(context);
         this.current = [0, 0, 0, 0];
     }
 
-    // $FlowFixMe[method-unbinding]
     set(program: WebGLProgram, name: string, v: [number, number, number, number]): void {
         if (!this.fetchUniformLocation(program, name)) return;
         if (v[0] !== this.current[0] || v[1] !== this.current[1] ||
@@ -109,13 +116,12 @@ class Uniform4f extends Uniform<[number, number, number, number]> {
     }
 }
 
-class UniformColor extends Uniform<Color> {
+class UniformColor extends Uniform<Color> implements IUniform<Color> {
     constructor(context: Context) {
         super(context);
         this.current = Color.transparent;
     }
 
-    // $FlowFixMe[method-unbinding]
     set(program: WebGLProgram, name: string, v: Color): void {
         if (!this.fetchUniformLocation(program, name)) return;
         if (v.r !== this.current.r || v.g !== this.current.g ||
@@ -127,13 +133,12 @@ class UniformColor extends Uniform<Color> {
 }
 
 const emptyMat4 = new Float32Array(16);
-class UniformMatrix4f extends Uniform<Float32Array> {
+class UniformMatrix4f extends Uniform<Float32Array> implements IUniform<Float32Array> {
     constructor(context: Context) {
         super(context);
         this.current = emptyMat4;
     }
 
-    // $FlowFixMe[method-unbinding]
     set(program: WebGLProgram, name: string, v: Float32Array): void {
         if (!this.fetchUniformLocation(program, name)) return;
         // The vast majority of matrix comparisons that will trip this set
@@ -155,13 +160,12 @@ class UniformMatrix4f extends Uniform<Float32Array> {
 }
 
 const emptyMat3 = new Float32Array(9);
-class UniformMatrix3f extends Uniform<Float32Array> {
+class UniformMatrix3f extends Uniform<Float32Array> implements IUniform<Float32Array> {
     constructor(context: Context) {
         super(context);
         this.current = emptyMat3;
     }
 
-    // $FlowFixMe[method-unbinding]
     set(program: WebGLProgram, name: string, v: Float32Array): void {
         if (!this.fetchUniformLocation(program, name)) return;
         for (let i = 0; i < 9; i++) {
@@ -175,13 +179,12 @@ class UniformMatrix3f extends Uniform<Float32Array> {
 }
 
 const emptyMat2 = new Float32Array(4);
-class UniformMatrix2f extends Uniform<Float32Array> {
+class UniformMatrix2f extends Uniform<Float32Array> implements IUniform<Float32Array> {
     constructor(context: Context) {
         super(context);
         this.current = emptyMat2;
     }
 
-    // $FlowFixMe[method-unbinding]
     set(program: WebGLProgram, name: string, v: Float32Array): void {
         if (!this.fetchUniformLocation(program, name)) return;
         for (let i = 0; i < 4; i++) {
@@ -195,7 +198,6 @@ class UniformMatrix2f extends Uniform<Float32Array> {
 }
 
 export {
-    Uniform,
     Uniform1i,
     Uniform1f,
     Uniform2f,
@@ -207,4 +209,4 @@ export {
     UniformMatrix4f
 };
 
-export type UniformBindings = {[_: string]: Uniform<any>};
+export type UniformBindings = {[_: string]: IUniform<any>};

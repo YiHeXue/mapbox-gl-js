@@ -2,7 +2,7 @@
 
 import StyleLayer from '../style_layer.js';
 import MercatorCoordinate from '../../geo/mercator_coordinate.js';
-import type Map from '../../ui/map.js';
+import type {Map} from '../../ui/map.js';
 import assert from 'assert';
 
 import type {ValidationErrors} from '../validate_style.js';
@@ -154,15 +154,15 @@ type CustomRenderMethod = (gl: WebGL2RenderingContext, matrix: Array<number>, pr
  */
 export type CustomLayerInterface = {
     id: string,
-    type: "custom",
-    slot: ?string;
-    renderingMode: "2d" | "3d",
+    type: 'custom',
+    slot?: string | void,
+    renderingMode?: '2d' | '3d',
     render: CustomRenderMethod,
-    prerender: ?CustomRenderMethod,
-    renderToTile: ?(gl: WebGL2RenderingContext, tileId: MercatorCoordinate) => void,
-    shouldRerenderTiles: ?() => boolean,
-    onAdd: ?(map: Map, gl: WebGL2RenderingContext) => void,
-    onRemove: ?(map: Map, gl: WebGL2RenderingContext) => void
+    prerender?: CustomRenderMethod | void,
+    renderToTile?: (gl: WebGL2RenderingContext, tileId: MercatorCoordinate) => void,
+    shouldRerenderTiles?: () => boolean,
+    onAdd?: (map: Map, gl: WebGL2RenderingContext) => void,
+    onRemove?: (map: Map, gl: WebGL2RenderingContext) => void
 }
 
 export function validateCustomStyleLayer(layerObject: CustomLayerInterface): ValidationErrors {
@@ -210,8 +210,7 @@ class CustomStyleLayer extends StyleLayer {
         return this.implementation.prerender !== undefined;
     }
 
-    // $FlowFixMe[method-unbinding]
-    isLayerDraped(_: ?SourceCache): boolean {
+    isDraped(_: ?SourceCache): boolean {
         return this.implementation.renderToTile !== undefined;
     }
 
@@ -225,8 +224,7 @@ class CustomStyleLayer extends StyleLayer {
         return false;
     }
 
-    // $FlowFixMe[incompatible-extend] - CustomStyleLayer is not serializable
-    serialize() {
+    serialize(): any {
         assert(false, "Custom layers cannot be serialized");
     }
 

@@ -3,8 +3,7 @@
 import * as DOM from '../../util/dom.js';
 import {extend, bindAll} from '../../util/util.js';
 
-import type Map from '../map.js';
-import type {ControlPosition} from '../map.js';
+import type {Map, ControlPosition} from '../map.js';
 
 type Unit = 'imperial' | 'metric' | 'nautical';
 
@@ -50,7 +49,7 @@ class ScaleControl {
     _isNumberFormatSupported: boolean;
     options: Options;
 
-    constructor(options: Options) {
+    constructor(options?: Options) {
         this.options = extend({}, defaultOptions, options);
 
         // Some old browsers (e.g., Safari < 14.1) don't support the "unit" style in NumberFormat.

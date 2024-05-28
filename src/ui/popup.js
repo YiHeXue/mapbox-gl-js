@@ -10,9 +10,9 @@ import smartWrap from '../util/smart_wrap.js';
 import {type Anchor, anchorTranslate} from './anchor.js';
 import {isLngLatBehindGlobe} from '../geo/projection/globe_util.js';
 
-import type Map from './map.js';
+import type {Map} from './map.js';
 import type {LngLatLike} from '../geo/lng_lat.js';
-import type {PointLike} from '@mapbox/point-geometry';
+import type {PointLike} from '../types/point-like.js';
 import type Marker from './marker.js';
 
 const defaultOptions = {
@@ -51,31 +51,31 @@ const focusQuerySelector = [
  *
  * @param {Object} [options]
  * @param {boolean} [options.closeButton=true] If `true`, a close button will appear in the
- *     top right corner of the popup.
+ * top right corner of the popup.
  * @param {boolean} [options.closeOnClick=true] If `true`, the popup will close when the
- *     map is clicked.
+ * map is clicked.
  * @param {boolean} [options.closeOnMove=false] If `true`, the popup will close when the
- *     map moves.
+ * map moves.
  * @param {boolean} [options.focusAfterOpen=true] If `true`, the popup will try to focus the
- *     first focusable element inside the popup.
+ * first focusable element inside the popup.
  * @param {string} [options.anchor] - A string indicating the part of the popup that should
- *     be positioned closest to the coordinate, set via {@link Popup#setLngLat}.
- *     Options are `'center'`, `'top'`, `'bottom'`, `'left'`, `'right'`, `'top-left'`,
- *     `'top-right'`, `'bottom-left'`, and `'bottom-right'`. If unset, the anchor will be
- *     dynamically set to ensure the popup falls within the map container with a preference
- *     for `'bottom'`.
+ * be positioned closest to the coordinate, set via {@link Popup#setLngLat}.
+ * Options are `'center'`, `'top'`, `'bottom'`, `'left'`, `'right'`, `'top-left'`,
+ * `'top-right'`, `'bottom-left'`, and `'bottom-right'`. If unset, the anchor will be
+ * dynamically set to ensure the popup falls within the map container with a preference
+ * for `'bottom'`.
  * @param {number | PointLike | Object} [options.offset] -
- *     A pixel offset applied to the popup's location specified as:
- *     - a single number specifying a distance from the popup's location
- *     - a {@link PointLike} specifying a constant offset
- *     - an object of {@link Point}s specifing an offset for each anchor position.
+ * A pixel offset applied to the popup's location specified as:
+ * - a single number specifying a distance from the popup's location
+ * - a {@link PointLike} specifying a constant offset
+ * - an object of {@link Point}s specifing an offset for each anchor position.
  *
- *     Negative offsets indicate left and up.
+ * Negative offsets indicate left and up.
  * @param {string} [options.className] Space-separated CSS class names to add to popup container.
  * @param {string} [options.maxWidth='240px'] -
- *     A string that sets the CSS property of the popup's maximum width (for example, `'300px'`).
- *     To ensure the popup resizes to fit its content, set this property to `'none'`.
- *     See the MDN documentation for the list of [available values](https://developer.mozilla.org/en-US/docs/Web/CSS/max-width).
+ * A string that sets the CSS property of the popup's maximum width (for example, `'300px'`).
+ * To ensure the popup resizes to fit its content, set this property to `'none'`.
+ * See the MDN documentation for the list of [available values](https://developer.mozilla.org/en-US/docs/Web/CSS/max-width).
  * @example
  * const markerHeight = 50;
  * const markerRadius = 10;
@@ -114,7 +114,7 @@ export default class Popup extends Evented {
     _classList: Set<string>;
     _marker: ?Marker;
 
-    constructor(options: PopupOptions) {
+    constructor(options?: PopupOptions) {
         super();
         this.options = extend(Object.create(defaultOptions), options);
         bindAll(['_update', '_onClose', 'remove', '_onMouseEvent'], this);

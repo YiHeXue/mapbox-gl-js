@@ -6,7 +6,7 @@ import Texture, {UserManagedTexture} from '../render/texture.js';
 import {ErrorEvent} from '../util/evented.js';
 import ValidationError from '../style-spec/error/validation_error.js';
 
-import type Map from '../ui/map.js';
+import type {Map} from '../ui/map.js';
 import type Dispatcher from '../util/dispatcher.js';
 import type {Evented} from '../util/evented.js';
 
@@ -184,9 +184,9 @@ class CanvasSource extends ImageSource {
      * @instance
      * @memberof CanvasSource
      * @param {Array<Array<number>>} coordinates Four geographical coordinates,
-     *     represented as arrays of longitude and latitude numbers, which define the corners of the canvas.
-     *     The coordinates start at the top left corner of the canvas and proceed in clockwise order.
-     *     They do not have to represent a rectangle.
+     * represented as arrays of longitude and latitude numbers, which define the corners of the canvas.
+     * The coordinates start at the top left corner of the canvas and proceed in clockwise order.
+     * They do not have to represent a rectangle.
      * @returns {CanvasSource} Returns itself to allow for method chaining.
      */
 

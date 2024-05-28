@@ -22,7 +22,7 @@ import type {
     PropertyValueSpecification
 } from '../style-spec/types.js';
 import type {CustomLayerInterface} from './style_layer/custom_style_layer.js';
-import type MapboxMap from '../ui/map.js';
+import type {Map as MapboxMap} from '../ui/map.js';
 import type {TilespaceQueryGeometry} from './query_geometry.js';
 import type {DEMSampler} from '../terrain/elevation.js';
 import type {IVectorTileFeature} from '@mapbox/vector-tile';
@@ -37,6 +37,9 @@ type LayerRenderingStats = {
     numRenderedVerticesInTransparentPass: number;
     numRenderedVerticesInShadowPass: number;
 };
+
+// Symbols are draped only on native and for certain cases only
+const drapedLayers = new Set(['fill', 'line', 'background', 'hillshade', 'raster']);
 
 class StyleLayer extends Evented {
     id: string;
@@ -65,25 +68,6 @@ class StyleLayer extends Evented {
 
     options: ?ConfigOptions;
     _stats: ?LayerRenderingStats;
-
-    +queryRadius: (bucket: Bucket) => number;
-    +queryIntersectsFeature: (queryGeometry: TilespaceQueryGeometry,
-                              feature: IVectorTileFeature,
-                              featureState: FeatureState,
-                              geometry: Array<Array<Point>>,
-                              zoom: number,
-                              transform: Transform,
-                              pixelPosMatrix: Float32Array,
-                              elevationHelper: ?DEMSampler,
-                              layoutVertexArrayOffset: number) => boolean | number;
-    +queryIntersectsMatchingFeature: (queryGeometry: TilespaceQueryGeometry,
-                                      featureIndex: number,
-                                      filter: FeatureFilter,
-                                      transform: Transform) => {queryFeature: ?QueryFeature, intersectionZ: number};
-
-    +onAdd: ?(map: MapboxMap) => void;
-    +onRemove: ?(map: MapboxMap) => void;
-    +isLayerDraped: ?(sourceCache: ?SourceCache) => boolean;
 
     constructor(layer: LayerSpecification | CustomLayerInterface, properties: $ReadOnly<{layout?: Properties<*>, paint?: Properties<*>}>, scope: string, options?: ?ConfigOptions) {
         super();
@@ -134,6 +118,16 @@ class StyleLayer extends Evented {
             //$FlowFixMe
             this.paint = new PossiblyEvaluated(properties.paint);
         }
+    }
+
+    // No-op in the StyleLayer class, must be implemented by each concrete StyleLayer
+    onAdd(_map: MapboxMap): void {}
+
+    // No-op in the StyleLayer class, must be implemented by each concrete StyleLayer
+    onRemove(_map: MapboxMap): void {}
+
+    isDraped(_sourceCache?: SourceCache | void): boolean {
+        return drapedLayers.has(this.type);
     }
 
     getLayoutProperty(name: string): PropertyValueSpecification<mixed> {
@@ -359,6 +353,30 @@ class StyleLayer extends Evented {
             }
         }
     }
+
+    // $FlowFixMe[incompatible-return] - No-op in the StyleLayer class, must be implemented by each concrete StyleLayer
+    queryRadius(_bucket: Bucket): number {}
+
+    queryIntersectsFeature(
+        _queryGeometry: TilespaceQueryGeometry,
+        _feature: IVectorTileFeature,
+        _featureState: FeatureState,
+        _geometry: Array<Array<Point>>,
+        _zoom: number,
+        _transform: Transform,
+        _pixelPosMatrix: Float32Array,
+        _elevationHelper: ?DEMSampler,
+        _layoutVertexArrayOffset: number
+    // $FlowFixMe[incompatible-return] - No-op in the StyleLayer class, must be implemented by each concrete StyleLayer
+    ): boolean | number {}
+
+    queryIntersectsMatchingFeature(
+        _queryGeometry: TilespaceQueryGeometry,
+        _featureIndex: number,
+        _filter: FeatureFilter,
+        _transform: Transform
+    // $FlowFixMe[incompatible-return] - No-op in the StyleLayer class, must be implemented by each concrete StyleLayer
+    ): {queryFeature: ?QueryFeature, intersectionZ: number} {}
 }
 
 export default StyleLayer;

@@ -53,6 +53,50 @@ afterAll(() => {
 });
 
 describe('Style#loadURL', () => {
+    test('wraps style with schema into import', async () => {
+        const style = new Style(new StubMap());
+
+        const initialStyle = createStyleJSON({
+            name: 'Mapbox Standard',
+            schema: {
+                lightPreset: {type: 'string', default: 'day'}
+            }
+        });
+
+        networkWorker.use(http.get('/style.json', () => HttpResponse.json(initialStyle)));
+
+        await new Promise(resolve => {
+            style.once('style.load', () => {
+                const rootStyle = style.serialize();
+                expect(rootStyle.imports).toEqual([{id: 'basemap', url: '', data: initialStyle}]);
+                resolve();
+            });
+
+            style.loadURL('/style.json');
+        });
+    });
+
+    test('wraps fragment into import', async () => {
+        const style = new Style(new StubMap());
+
+        const initialStyle = createStyleJSON({
+            name: 'Mapbox Standard',
+            fragment: true,
+        });
+
+        networkWorker.use(http.get('/style.json', () => HttpResponse.json(initialStyle)));
+
+        await new Promise(resolve => {
+            style.once('style.load', () => {
+                const rootStyle = style.serialize();
+                expect(rootStyle.imports).toEqual([{id: 'basemap', url: '', data: initialStyle}]);
+                resolve();
+            });
+
+            style.loadURL('/style.json');
+        });
+    });
+
     test('imports style from URL', async () => {
         const style = new Style(new StubMap());
 
@@ -795,6 +839,91 @@ describe('Style#updateImport', () => {
                 url: '/style2.json'
             });
         });
+    });
+});
+
+describe('Style#getImportGlobalIds', () => {
+    test('should return all imports', async () => {
+        const style = new Style(new StubMap());
+
+        networkWorker.use(
+            http.get('/standard.json', () => {
+                return HttpResponse.json(createStyleJSON());
+            }),
+            http.get('/standard-2.json', () => {
+                return HttpResponse.json(createStyleJSON());
+            }),
+            http.get('/supplement.json', () => {
+                return HttpResponse.json(createStyleJSON());
+            }),
+            http.get('/roads.json', () => {
+                return HttpResponse.json(createStyleJSON());
+            }),
+        );
+
+        style.loadJSON({
+            version: 8,
+            imports: [
+                {
+                    id: 'supplement',
+                    url: '/supplement.json',
+                    data: {
+                        version: 8,
+                        layers: [],
+                        sources: {},
+                        imports: [
+                            {
+                                id: 'inner',
+                                url: '/inner.json',
+                                data: {
+                                    version: 8,
+                                    layers: [],
+                                    sources: {},
+                                    imports: [
+                                        {
+                                            id: 'basemap-2',
+                                            url: '/standard-2.json'
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    id: 'roads',
+                    url: '/roads.json'
+                },
+                {
+                    id: 'wrapper',
+                    url: '/non-standard.json',
+                    data: {
+                        version: 8,
+                        layers: [],
+                        sources: {},
+                        imports: [
+                            {
+                                id: 'basemap',
+                                url: '/standard.json'
+                            }
+                        ]
+                    }
+                }
+            ],
+            layers: [],
+            sources: {}
+        });
+
+        await waitFor(style, "style.load");
+
+        expect(style.getImportGlobalIds()).toEqual([
+            "json://2572277275",
+            "json://978922503",
+            new URL("/standard-2.json", location.href).toString(),
+            new URL("/roads.json", location.href).toString(),
+            "json://3288768429",
+            new URL("/standard.json", location.href).toString(),
+        ]);
     });
 });
 

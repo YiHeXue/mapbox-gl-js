@@ -24,6 +24,7 @@ import type {
     CompositeExpression
 } from '../style-spec/expression/index.js';
 import type {Expression} from '../style-spec/expression/expression.js';
+import type {ObjMap} from '../types/obj-map.js';
 
 type TimePoint = number;
 
@@ -163,8 +164,8 @@ class TransitionablePropertyValue<T, R> {
  *
  * @private
  */
-type TransitionablePropertyValues<Props: Object>
-    = $Exact<$ObjMap<Props, <T, R>(p: Property<T, R>) => TransitionablePropertyValue<T, R>>>
+type TransitionablePropertyValues<Props: {[string]: any}>
+    = $Exact<ObjMap<Props, <T, R>(p: Property<T, R>) => TransitionablePropertyValue<T, R>>>
 
 /**
  * `Transitionable` stores a map of all (property name, `TransitionablePropertyValue`) pairs for paint properties of a
@@ -173,7 +174,7 @@ type TransitionablePropertyValues<Props: Object>
  *
  * @private
  */
-export class Transitionable<Props: Object> {
+export class Transitionable<Props: {[string]: any}> {
     _properties: Properties<Props>;
     _values: TransitionablePropertyValues<Props>;
     _scope: ?string;
@@ -188,7 +189,8 @@ export class Transitionable<Props: Object> {
         this.isConfigDependent = false;
     }
 
-    getValue<S: string, T>(name: S): PropertyValueSpecification<T> | void {
+    getValue<S: string, T: any>(name: S): PropertyValueSpecification<T> | void {
+        // $FlowFixMe[incompatible-return]
         return clone(this._values[name].value.value);
     }
 
@@ -202,7 +204,7 @@ export class Transitionable<Props: Object> {
         this.isConfigDependent = this.isConfigDependent || this._values[name].value.expression.isConfigDependent;
     }
 
-    setTransitionOrValue<P: Object>(properties: ?P, options?: ?ConfigOptions) {
+    setTransitionOrValue<P: {[string]: any} | void>(properties: ?P, options?: ?ConfigOptions) {
         if (options) this._options = options;
 
         const specProperties = this._properties.properties;
@@ -300,7 +302,7 @@ class TransitioningPropertyValue<T, R> {
         }
     }
 
-    possiblyEvaluate(parameters: EvaluationParameters, canonical: CanonicalTileID, availableImages: Array<string>): R {
+    possiblyEvaluate(parameters: EvaluationParameters, canonical: CanonicalTileID | void, availableImages: Array<string> | void): R {
         const now = parameters.now || 0;
         const finalValue = this.value.possiblyEvaluate(parameters, canonical, availableImages);
         const prior = this.prior;
@@ -334,8 +336,8 @@ class TransitioningPropertyValue<T, R> {
  *
  * @private
  */
-type TransitioningPropertyValues<Props: Object>
-    = $Exact<$ObjMap<Props, <T, R>(p: Property<T, R>) => TransitioningPropertyValue<T, R>>>
+type TransitioningPropertyValues<Props: {[string]: any}>
+    = $Exact<ObjMap<Props, <T, R>(p: Property<T, R>) => TransitioningPropertyValue<T, R>>>
 
 /**
  * `Transitioning` stores a map of all (property name, `TransitioningPropertyValue`) pairs for paint properties of a
@@ -344,7 +346,7 @@ type TransitioningPropertyValues<Props: Object>
  *
  * @private
  */
-export class Transitioning<Props: Object> {
+export class Transitioning<Props: {[string]: any}> {
     _properties: Properties<Props>;
     _values: TransitioningPropertyValues<Props>;
 
@@ -379,8 +381,8 @@ export class Transitioning<Props: Object> {
  *
  * @private
  */
-type PropertyValues<Props: Object>
-    = $Exact<$ObjMap<Props, <T, R>(p: Property<T, R>) => PropertyValue<T, R>>>
+type PropertyValues<Props: {[string]: any}>
+    = $Exact<ObjMap<Props, <T, R>(p: Property<T, R>) => PropertyValue<T, R>>>
 
 /**
  * A helper type: given an object type `Properties` whose values are each of type `Property<T, R>`, it calculates
@@ -388,8 +390,8 @@ type PropertyValues<Props: Object>
  *
  * @private
  */
-type PropertyValueSpecifications<Props: Object>
-    = $Exact<$ObjMap<Props, <T, R>(p: Property<T, R>) => PropertyValueSpecification<T>>>
+type PropertyValueSpecifications<Props: {[string]: any}>
+    = $Exact<ObjMap<Props, <T, R>(p: Property<T, R>) => PropertyValueSpecification<T>>>
 
 /**
  * Because layout properties are not transitionable, they have a simpler representation and evaluation chain than
@@ -402,7 +404,7 @@ type PropertyValueSpecifications<Props: Object>
  *
  * @private
  */
-export class Layout<Props: Object> {
+export class Layout<Props: {[string]: any}> {
     _properties: Properties<Props>;
     _values: PropertyValues<Props>;
     _scope: string;
@@ -427,7 +429,7 @@ export class Layout<Props: Object> {
     }
 
     serialize(): PropertyValueSpecifications<Props> {
-        const result: Object = {};
+        const result: any = {};
         for (const property of Object.keys(this._values)) {
             const value = this.getValue(property);
             if (value !== undefined) {
@@ -525,15 +527,15 @@ export class PossiblyEvaluatedPropertyValue<T> {
  *
  * @private
  */
-type PossiblyEvaluatedPropertyValues<Props: Object>
-    = $Exact<$ObjMap<Props, <T, R>(p: Property<T, R>) => R>>
+type PossiblyEvaluatedPropertyValues<Props: {[string]: any}>
+    = $Exact<ObjMap<Props, <T, R>(p: Property<T, R>) => R>>
 
 /**
  * `PossiblyEvaluated` stores a map of all (property name, `R`) pairs for paint or layout properties of a
  * given layer type.
  * @private
  */
-export class PossiblyEvaluated<Props: Object> {
+export class PossiblyEvaluated<Props: {[string]: any}> {
     _properties: Properties<Props>;
     _values: PossiblyEvaluatedPropertyValues<Props>;
 
@@ -586,10 +588,10 @@ export class DataConstantProperty<T> implements Property<T, T> {
  */
 export class DataDrivenProperty<T> implements Property<T, PossiblyEvaluatedPropertyValue<T>> {
     specification: StylePropertySpecification;
-    overrides: ?Object;
+    overrides: ?{[string]: any};
     useIntegerZoom: ?boolean;
 
-    constructor(specification: StylePropertySpecification, overrides?: Object) {
+    constructor(specification: StylePropertySpecification, overrides?: {[string]: any}) {
         this.specification = specification;
         this.overrides = overrides;
     }
@@ -717,7 +719,7 @@ export class PositionProperty implements Property<[number, number, number], Posi
  *
  * @private
  */
-export class Properties<Props: Object> {
+export class Properties<Props: {[string]: any}> {
     properties: Props;
     defaultPropertyValues: PropertyValues<Props>;
     defaultTransitionablePropertyValues: TransitionablePropertyValues<Props>;

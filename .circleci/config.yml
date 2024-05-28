@@ -13,7 +13,7 @@ workflows:
               only: /.*/
       - install-mbx-ci:
           requires:
-              - prepare-linux
+            - prepare-linux
           filters:
             tags:
               only: /.*/
@@ -48,9 +48,22 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - test-unit:
+      - setup-playwright:
           requires:
             - prepare-linux
+          filters:
+            tags:
+              only: /.*/
+      - test-unit:
+          requires:
+            - setup-playwright
+          filters:
+            tags:
+              only: /.*/
+      - test-csp:
+          requires:
+            - setup-playwright
+            - build
           filters:
             tags:
               only: /.*/
@@ -63,6 +76,12 @@ workflows:
       - test-expressions:
           requires:
             - prepare-linux
+          filters:
+            tags:
+              only: /.*/
+      - test-typescript:
+          requires:
+            - build
           filters:
             tags:
               only: /.*/
@@ -153,7 +172,7 @@ workflows:
 
 linux-defaults: &linux-defaults
   docker:
-    - image: cimg/node:18.19-browsers
+    - image: cimg/node:18.20-browsers
   working_directory: ~/mapbox-gl-js
 
 mac-defaults: &mac-defaults
@@ -239,7 +258,7 @@ jobs:
       - run: npm run build-style-spec
       - run: npm run build-flow-types
       - run: npm run test-build
-      - run: while read l; do cp debug/$l test/release/$l; done < test/release/local_release_page_list.txt
+      - run: npm run prepare-release-pages
       - run:
           name: Create mapbox-gl.tar.gz
           command: |
@@ -254,6 +273,27 @@ jobs:
           root: ~/
           paths:
             - mapbox-gl-js/dist
+
+  setup-playwright:
+    <<: *linux-defaults
+    steps:
+      - attach_workspace:
+          at: ~/
+      - restore_cache:
+          keys:
+            - v0-playwright-{{ checksum "package-lock.json" }}
+      - run:
+          name: Playwright version
+          command: npx playwright --version
+      - run: npx playwright install chromium
+      - save_cache:
+          key: v0-playwright-{{ checksum "package-lock.json" }}
+          paths:
+           - ~/.cache
+      - persist_to_workspace:
+          root: ~/
+          paths:
+            - .cache
 
   check-bundle-size:
     <<: *linux-defaults
@@ -276,16 +316,9 @@ jobs:
     steps:
       - attach_workspace:
           at: ~/
-      - restore_cache:
-          keys:
-            - v0-playwright
       - run:
           command: npm run test-unit
           no_output_timeout: 5m
-      - save_cache:
-          key: v0-playwright
-          paths:
-           - ~/.cache
 
   test-query:
     <<: *linux-defaults
@@ -298,6 +331,30 @@ jobs:
           path: test/integration/query-tests
       - store_artifacts:
           path: "test/integration/query-tests/index.html"
+
+  test-typescript:
+    <<: *linux-defaults
+    steps:
+      - attach_workspace:
+          at: ~/
+      - run:
+          name: Build TypeScript
+          command: |
+            cd ./test/build/typescript &&
+            npm ci &&
+            npm run build &&
+            rm -rf node_modules
+      - store_artifacts:
+          path: "test/build/typescript"
+
+  test-csp:
+    <<:  *linux-defaults
+    steps:
+      - attach_workspace:
+          at: ~/
+      - run:
+          command: npm run test-csp
+          no_output_timeout: 5m
 
   test-webpack:
     <<: *linux-defaults

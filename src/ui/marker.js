@@ -7,11 +7,11 @@ import smartWrap from '../util/smart_wrap.js';
 import {bindAll, extend, radToDeg, smoothstep} from '../util/util.js';
 import {type Anchor, anchorTranslate} from './anchor.js';
 import {Event, Evented} from '../util/evented.js';
-import type Map from './map.js';
+import type {Map} from './map.js';
 import type Popup from './popup.js';
 import type {LngLatLike} from "../geo/lng_lat.js";
 import type {MapMouseEvent, MapTouchEvent} from './events.js';
-import type {PointLike} from '@mapbox/point-geometry';
+import type {PointLike} from '../types/point-like.js';
 import {GLOBE_ZOOM_THRESHOLD_MAX} from '../geo/projection/globe_constants.js';
 import {globeTiltAtLngLat, globeCenterToScreenPoint, isLngLatBehindGlobe} from '../geo/projection/globe_util.js';
 import assert from 'assert';
@@ -37,7 +37,7 @@ type Options = {
  * @param {Object} [options]
  * @param {HTMLElement} [options.element] DOM element to use as a marker. The default is a light blue, droplet-shaped SVG marker.
  * @param {string} [options.anchor='center'] A string indicating the part of the Marker that should be positioned closest to the coordinate set via {@link Marker#setLngLat}.
- *     Options are `'center'`, `'top'`, `'bottom'`, `'left'`, `'right'`, `'top-left'`, `'top-right'`, `'bottom-left'`, and `'bottom-right'`.
+ * Options are `'center'`, `'top'`, `'bottom'`, `'left'`, `'right'`, `'top-left'`, `'top-right'`, `'bottom-left'`, and `'bottom-right'`.
  * @param {PointLike} [options.offset] The offset in pixels as a {@link PointLike} object to apply relative to the element's center. Negatives indicate left and up.
  * @param {string} [options.color='#3FB1CE'] The color to use for the default marker if `options.element` is not provided. The default is light blue.
  * @param {number} [options.scale=1] The scale to use for the default marker if `options.element` is not provided. The default scale corresponds to a height of `41px` and a width of `27px`.
@@ -322,7 +322,7 @@ export default class Marker extends Evented {
      * Binds a {@link Popup} to the {@link Marker}.
      *
      * @param {Popup | null} popup An instance of the {@link Popup} class. If undefined or null, any popup
-     *     set on this {@link Marker} instance is unset.
+     * set on this {@link Marker} instance is unset.
      * @returns {Marker} Returns itself to allow for method chaining.
      * @example
      * const marker = new mapboxgl.Marker()

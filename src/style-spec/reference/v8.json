@@ -948,6 +948,11 @@
       "default": 18,
       "doc": "Maximum zoom level at which to create vector tiles (higher means greater detail at high zoom levels)."
     },
+    "minzoom": {
+      "type": "number",
+      "default": 0,
+      "doc": "Minimum zoom level at which to create vector tiles"
+    },
     "attribution": {
       "type": "string",
       "doc": "Contains an attribution to be displayed when the map is shown to a user."
@@ -999,11 +1004,21 @@
     "generateId": {
       "type": "boolean",
       "default": false,
-      "doc": "Whether to generate ids for the geojson features. When enabled, the `feature.id` property will be auto assigned based on its index in the `features` array, over-writing any previous values."
+      "doc": "Whether to generate ids for the GeoJSON features. When enabled, the `feature.id` property will be auto assigned based on its index in the `features` array, over-writing any previous values."
     },
     "promoteId": {
       "type": "promoteId",
       "doc": "A property to use as a feature id (for feature state). Either a property name, or an object of the form `{<sourceLayer>: <propertyName>}`."
+    },
+    "dynamic": {
+      "type": "boolean",
+      "default": false,
+      "doc": "Whether to optimize this source for frequent data updates (e.g. animating features).",
+      "sdk-support": {
+        "basic functionality": {
+          "js": "3.4.0"
+        }
+      }
     }
   },
   "source_video": {
@@ -1178,10 +1193,9 @@
           "doc": "Particle animation driven by textures such as wind maps.",
           "sdk-support": {
             "basic functionality": {
-              "js": "0.10.0",
-              "android": "2.0.1",
-              "ios": "2.0.0",
-              "macos": "0.1.0"
+              "js": "3.3.0",
+              "android": "11.4.0",
+              "ios": "11.4.0"
             }
           }
         },
@@ -1391,7 +1405,7 @@
     "model-id": {
       "type": "string",
       "default": "",
-      "doc": "Model to render.",
+      "doc": "Model to render. It can be either a string referencing an element to the models root property or an internal or external URL",
       "property-type": "data-driven",
       "expression": {
         "interpolated": false,
@@ -1664,6 +1678,9 @@
         },
         "miter": {
           "doc": "A join with a sharp, angled corner which is drawn with the outer sides beyond the endpoint of the path until they meet."
+        },
+        "none": {
+          "doc": "Line segments are not joined together, each one creates a separate line. Useful in combination with line-pattern. Line-cap property is not respected. Can't be used with data-driven styling."
         }
       },
       "default": "miter",
@@ -1678,6 +1695,11 @@
           "js": "0.40.0",
           "android": "5.2.0",
           "ios": "3.7.0"
+        },
+        "`none` value": {
+          "js": "3.4.0",
+          "android": "11.5.0",
+          "ios": "11.5.0"
         }
       },
       "expression": {
@@ -3229,14 +3251,14 @@
       "doc": "Whether this layer is displayed.",
       "sdk-support": {
         "basic functionality": {
-          "js": "0.10.0",
-          "android": "2.0.1",
-          "ios": "2.0.0"
+          "js": "3.3.0",
+          "android": "11.4.0",
+          "ios": "11.4.0"
         },
         "expressions support": {
-          "js": "3.0.0",
-          "android": "11.0.0",
-          "ios": "11.0.0"
+          "js": "3.3.0",
+          "android": "11.4.0",
+          "ios": "11.4.0"
         }
       },
       "expression": {
@@ -4543,8 +4565,8 @@
         "sdk-support": {
           "basic functionality": {
             "js": "3.3.0",
-            "android": "",
-            "ios": ""
+            "android": "11.4.0",
+            "ios": "11.4.0"
           }
         }
       },
@@ -7329,17 +7351,73 @@
     },
     "icon-color-saturation": {
       "type": "number",
-      "default": 1,
-      "minimum": 0,
+      "default": 0,
+      "minimum": -1,
       "maximum": 1,
-      "transition": true,
-      "units": "intensity",
-      "doc": "Controls saturation level of the symbol icon. With the default value of 1 the icon color is preserved while with a value of 0 it is fully desaturated and looks black and white.",
+      "transition": false,
+      "doc": "Increase or reduce the saturation of the symbol icon.",
       "sdk-support": {
         "basic functionality": {
           "js": "3.1.0",
           "android": "11.1.0",
           "ios": "11.1.0"
+        }
+      },
+      "expression": {
+        "interpolated": false
+      },
+      "property-type": "data-constant"
+    },
+    "icon-color-contrast": {
+      "type": "number",
+      "default": 0,
+      "minimum": -1,
+      "maximum": 1,
+      "transition": false,
+      "doc": "Increase or reduce the contrast of the symbol icon.",
+      "sdk-support": {
+        "basic functionality": {
+          "js": "3.5.0",
+          "android": "11.5.0",
+          "ios": "11.5.0"
+        }
+      },
+      "expression": {
+        "interpolated": false
+      },
+      "property-type": "data-constant"
+    },
+    "icon-color-brightness-min": {
+      "type": "number",
+      "doc": "Increase or reduce the brightness of the symbols. The value is the minimum brightness.",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "transition": false,
+      "sdk-support": {
+        "basic functionality": {
+          "js": "3.5.0",
+          "android": "11.5.0",
+          "ios": "11.5.0"
+        }
+      },
+      "expression": {
+        "interpolated": false
+      },
+      "property-type": "data-constant"
+    },
+    "icon-color-brightness-max": {
+      "type": "number",
+      "doc": "Increase or reduce the brightness of the symbols. The value is the maximum brightness.",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "transition": false,
+      "sdk-support": {
+        "basic functionality": {
+          "js": "3.5.0",
+          "android": "11.5.0",
+          "ios": "11.5.0"
         }
       },
       "expression": {
@@ -7689,12 +7767,12 @@
       "property-type": "data-constant",
       "transition": false,
       "doc": "Displayed band of raster array source layer",
-      "example": "band-name",
+      "example": "\"1713348000\"",
       "sdk-support": {
         "basic functionality": {
-          "js": "",
-          "android": "",
-          "ios": ""
+          "js": "3.3.0",
+          "android": "11.4.0",
+          "ios": "11.4.0"
         }
       }
     },
@@ -7706,9 +7784,9 @@
       "transition": false,
       "sdk-support": {
         "basic functionality": {
-          "js": "",
-          "android": "",
-          "ios": ""
+          "js": "3.3.0",
+          "android": "11.4.0",
+          "ios": "11.4.0"
         }
       },
       "property-type": "data-constant"
@@ -7719,9 +7797,9 @@
       "transition": false,
       "sdk-support": {
         "basic functionality": {
-          "js": "",
-          "android": "",
-          "ios": ""
+          "js": "3.3.0",
+          "android": "11.4.0",
+          "ios": "11.4.0"
         },
         "data-driven styling": {}
       },
@@ -7741,9 +7819,9 @@
       "transition": false,
       "sdk-support": {
         "basic functionality": {
-          "js": "",
-          "android": "",
-          "ios": ""
+          "js": "3.3.0",
+          "android": "11.4.0",
+          "ios": "11.4.0"
         }
       },
       "property-type": "data-constant"
@@ -7757,9 +7835,9 @@
       "transition": true,
       "sdk-support": {
         "basic functionality": {
-          "js": "",
-          "android": "",
-          "ios": ""
+          "js": "3.3.0",
+          "android": "11.4.0",
+          "ios": "11.4.0"
         }
       },
       "expression": {
@@ -7779,9 +7857,9 @@
       "transition": true,
       "sdk-support": {
         "basic functionality": {
-          "js": "",
-          "android": "",
-          "ios": ""
+          "js": "3.3.0",
+          "android": "11.4.0",
+          "ios": "11.4.0"
         }
       },
       "expression": {
@@ -7801,9 +7879,9 @@
       "transition": false,
       "sdk-support": {
         "basic functionality": {
-          "js": "",
-          "android": "",
-          "ios": ""
+          "js": "3.3.0",
+          "android": "11.4.0",
+          "ios": "11.4.0"
         }
       },
       "property-type": "data-constant"
@@ -8623,6 +8701,29 @@
         }
       },
       "property-type": "data-constant"
+    },
+    "model-front-cutoff": {
+      "type": "array",
+      "private": true,
+      "value": "number",
+      "property-type": "data-constant",
+      "transition": false,
+      "expression": {
+        "interpolated": true,
+        "parameters": ["zoom"]
+      },
+      "length": 3,
+      "default": [0.0, 0.0, 1.0],
+      "minimum": [0.0, 0.0, 0.0],
+      "maximum": [1.0, 1.0, 1.0],
+      "doc": "An array for configuring the fade-out effect for the front cutoff of content on pitched map views. It contains three values: start, range and final opacity. The start parameter defines the point at which the fade-out effect begins, with smaller values causing the effect to start earlier. The range parameter specifies how long the fade-out effect will last. A value of 0.0 for range makes content disappear immediately without a fade-out effect. The final opacity determines content opacity at the end of the fade-out effect. A value of 1.0 for final opacity means that the cutoff is completely disabled.",
+      "sdk-support": {
+        "basic functionality": {
+          "js": "3.5.0",
+          "android": "11.5.0",
+          "ios": "11.5.0"
+        }
+      }
     }
   },
   "transition": {

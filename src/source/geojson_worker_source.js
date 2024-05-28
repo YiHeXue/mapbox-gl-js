@@ -3,7 +3,6 @@
 import {getJSON} from '../util/ajax.js';
 
 import {getPerformanceMeasurement} from '../util/performance.js';
-import rewind from '@mapbox/geojson-rewind';
 import GeoJSONWrapper from './geojson_wrapper.js';
 import vtpbf from 'vt-pbf';
 import Supercluster from 'supercluster';
@@ -32,12 +31,14 @@ export type GeoJSONWorkerOptions = {
     superclusterOptions?: Object,
     geojsonVtOptions?: Object,
     clusterProperties?: Object,
-    filter?: Array<mixed>
+    filter?: Array<mixed>,
+    dynamic?: boolean
 };
 
 export type LoadGeoJSONParameters = GeoJSONWorkerOptions & {
     request?: RequestParameters,
-    data?: string
+    data?: string,
+    append?: boolean
 };
 
 export type LoadGeoJSON = (params: LoadGeoJSONParameters, callback: ResponseCallback<Object>) => void;
@@ -93,7 +94,8 @@ function loadGeoJSONTile(params: RequestedTileParameters, callback: LoadVectorDa
  */
 class GeoJSONWorkerSource extends VectorTileWorkerSource {
     loadGeoJSON: LoadGeoJSON;
-    _geoJSONIndex: GeoJSONIndex
+    _geoJSONIndex: GeoJSONIndex;
+    _featureMap: Map<number | string, mixed>;
 
     /**
      * @param [loadGeoJSON] Optional method for custom loading/parsing of
@@ -106,6 +108,7 @@ class GeoJSONWorkerSource extends VectorTileWorkerSource {
         if (loadGeoJSON) {
             this.loadGeoJSON = loadGeoJSON;
         }
+        this._featureMap = new Map();
     }
 
     /**
@@ -132,24 +135,46 @@ class GeoJSONWorkerSource extends VectorTileWorkerSource {
         this.loadGeoJSON(params, (err: ?Error, data: ?Object) => {
             if (err || !data) {
                 return callback(err);
+
             } else if (typeof data !== 'object') {
                 return callback(new Error(`Input data given to '${params.source}' is not a valid GeoJSON object.`));
-            } else {
-                rewind(data, true);
 
+            } else {
                 try {
                     if (params.filter) {
                         const compiled = createExpression(params.filter, {type: 'boolean', 'property-type': 'data-driven', overridable: false, transition: false});
                         if (compiled.result === 'error')
                             throw new Error(compiled.value.map(err => `${err.key}: ${err.message}`).join(', '));
 
-                        const features = data.features.filter(feature => compiled.value.evaluate({zoom: 0}, feature));
-                        data = {type: 'FeatureCollection', features};
+                        data.features = data.features.filter(feature => compiled.value.evaluate({zoom: 0}, feature));
+                    }
+
+                    // for GeoJSON sources that are marked as dynamic, we retain the GeoJSON data
+                    // as a id-to-feature map so that we can later update features by id individually
+                    if (params.dynamic) {
+                        if (data.type === 'Feature') data = {type: 'FeatureCollection', features: [data]};
+
+                        if (!params.append) {
+                            this._featureMap.clear();
+                        }
+
+                        for (const feature of (data.features || [])) {
+                            const id = feature.id;
+                            if (id !== undefined) {
+                                if (!feature.geometry) {
+                                    this._featureMap.delete(id);
+                                } else {
+                                    this._featureMap.set(id, feature);
+                                }
+                            }
+                        }
+                        data.features = [...this._featureMap.values()];
                     }
 
                     this._geoJSONIndex = params.cluster ?
                         new Supercluster(getSuperclusterOptions(params)).load(data.features) :
                         geojsonvt(data, params.geojsonVtOptions);
+
                 } catch (err) {
                     return callback(err);
                 }

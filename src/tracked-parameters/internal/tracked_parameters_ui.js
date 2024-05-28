@@ -4,9 +4,10 @@ import {Pane} from 'tweakpane';
 import cloneDeep from 'lodash.clonedeep';
 import serialize from 'serialize-to-js';
 import assert from 'assert';
-import {isWorker} from '../../../src/util/util.js';
-import type {default as MapboxMap} from '../../../src/ui/map.js';
+import {isWorker, warnOnce} from '../../../src/util/util.js';
+import type {Map as MapboxMap} from '../../../src/ui/map.js';
 import type {Description} from './tracked_parameters_mock.js';
+import type {ITrackedParameters} from 'tracked_parameters_proxy';
 
 if (!isWorker()) {
     const style = document.createElement('style');
@@ -139,7 +140,7 @@ export function registerParameter(object: Object, scope: Array<string>, name: st
     if (global) {
         global.registerParameter(object, scope, name, description, onChange);
 
-        console.warn(`Dev only "registerParameter" call. For production consider replacing with tracked parameters container method.`);
+        console.warn(`Dev only "registerParameter('${name}')" call. For production consider replacing with tracked parameters container method.`);
     }
 }
 
@@ -147,7 +148,23 @@ export function registerButton(scope: Array<string>, buttonTitle: string, onClic
     if (global) {
         global.registerButton(scope, buttonTitle, onClick);
 
-        console.warn(`Dev only "registerButton" call. For production consider replacing with tracked parameters container method.`);
+        console.warn(`Dev only "registerButton('${buttonTitle}')" call. For production consider replacing with tracked parameters container method.`);
+    }
+}
+
+export function registerBinding(containerObject: Object, scope: Array<string>, name: string, description: ?Object) {
+    if (global) {
+        global.registerBinding(containerObject, scope, name, description);
+
+        console.warn(`Dev only "registerBinding('${name}')" call. For production consider replacing with tracked parameters container method.`);
+    }
+}
+
+export function refreshUI() {
+    if (global) {
+        global.refreshUI();
+
+        warnOnce(`Dev only "refreshUI" call. For production consider replacing with tracked parameters container method.`);
     }
 }
 
@@ -158,6 +175,7 @@ class ParameterInfo {
     defaultValue: any;
     noSave: boolean;
     tpBinding: any;
+    label: string;
 
     constructor(object: Object, parameterName: string, defaultValue: any, noSave: boolean, tpBinding: any) {
         this.containerObject = object;
@@ -165,11 +183,12 @@ class ParameterInfo {
         this.defaultValue = defaultValue;
         this.noSave = noSave;
         this.tpBinding = tpBinding;
+        this.label = tpBinding.label ? tpBinding.label : parameterName;
     }
 }
 
 // Tracked parameters container
-export class TrackedParameters {
+export class TrackedParameters implements ITrackedParameters {
     _map: MapboxMap;
     _container: HTMLElement;
 
@@ -267,7 +286,7 @@ export class TrackedParameters {
             const isDefault = JSON.stringify(parameterInfo.defaultValue) === JSON.stringify(parameterInfo.containerObject[parameterInfo.parameterName]);
 
             const noSaveIndicator = parameterInfo.noSave ? "❗💾 " : "";
-            parameterInfo.tpBinding.label = (isDefault ? "  " : "* ") + noSaveIndicator + parameterInfo.parameterName;
+            parameterInfo.tpBinding.label = (isDefault ? "  " : "* ") + noSaveIndicator + parameterInfo.label;
 
             const folderName = key.slice(0, key.lastIndexOf("|"));
 
@@ -536,6 +555,31 @@ export class TrackedParameters {
         const button = currentScope.addButton({title: buttonTitle});
         button.on('click', () => {
             onClick();
+        });
+    }
+
+    registerBinding(containerObject: Object, scope: Array<string>, name: string, description: ?Object) {
+        const {currentScope} = this.createFoldersChainAndSelectScope(scope);
+
+        const modifiedLabel = `  ${(() => {
+            if (!description) {
+                return "";
+            }
+
+            if ("label" in description) {
+                return description.label;
+            }
+
+            return name;
+        })()}`;
+
+        // Add button to TweakPane UI
+        currentScope.addBinding(containerObject, name, {...description, label: modifiedLabel});
+    }
+
+    refreshUI() {
+        this._folders.forEach((folder) => {
+            folder.refresh();
         });
     }
 }

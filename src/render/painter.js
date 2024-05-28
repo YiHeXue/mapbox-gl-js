@@ -47,14 +47,12 @@ import {RGBAImage} from '../util/image.js';
 import {ReplacementSource} from '../../3d-style/source/replacement_source.js';
 import type {Source} from '../source/source.js';
 import type {CutoffParams} from '../render/cutoff.js';
-import type {TransformFeedbackConfiguration} from '../gl/transform_feedback.js';
 
 // 3D-style related
 import model, {prepare as modelPrepare} from '../../3d-style/render/draw_model.js';
 import {lightsUniformValues} from '../../3d-style/render/lights.js';
 import {ShadowRenderer} from '../../3d-style/render/shadow_renderer.js';
 import {WireframeDebugCache} from "./wireframe_cache.js";
-import {TrackedParameters} from '../tracked-parameters/tracked_parameters.js';
 
 import type Transform from '../geo/transform.js';
 import type {OverscaledTileID, UnwrappedTileID} from '../source/tile_id.js';
@@ -70,6 +68,7 @@ import type ResolvedImage from '../style-spec/expression/types/resolved_image.js
 import type {DynamicDefinesType} from './program/program_uniforms.js';
 import {FOG_OPACITY_THRESHOLD} from '../style/fog_helpers.js';
 import type {ContextOptions} from '../gl/context.js';
+import type {ITrackedParameters} from 'tracked_parameters_proxy';
 
 export type RenderPass = 'offscreen' | 'opaque' | 'translucent' | 'sky' | 'shadow' | 'light-beam';
 export type CanvasCopyInstances = {
@@ -80,7 +79,6 @@ export type CanvasCopyInstances = {
 export type CreateProgramParams = {
     config?: ProgramConfiguration,
     defines?: DynamicDefinesType[],
-    transformFeedback?: TransformFeedbackConfiguration,
     overrideFog?: boolean,
     overrideRtt?: boolean
 }
@@ -213,27 +211,69 @@ class Painter {
 
     _wireframeDebugCache: WireframeDebugCache;
 
-    tp: TrackedParameters;
+    tp: ITrackedParameters;
 
     _debugParams: {
         showTerrainProxyTiles: boolean;
+        fpsWindow: number;
+        continousRedraw: boolean;
+        enabledLayers: any;
     }
 
-    constructor(gl: WebGL2RenderingContext, contextCreateOptions: ContextOptions, transform: Transform, tp: TrackedParameters) {
+    _timeStamp: number;
+    _averageFPS: number;
+
+    _fpsHistory: Array<number>;
+
+    constructor(gl: WebGL2RenderingContext, contextCreateOptions: ContextOptions, transform: Transform, tp: ITrackedParameters) {
         this.context = new Context(gl, contextCreateOptions);
         this.transform = transform;
         this._tileTextures = {};
         this.frameCopies = [];
         this.loadTimeStamps = [];
         this.tp = tp;
+        this._timeStamp = new Date().getTime();
+        this._averageFPS = 0;
+        this._fpsHistory = [];
 
         this._debugParams = {
-            showTerrainProxyTiles: false
+            showTerrainProxyTiles: false,
+            fpsWindow: 30,
+            continousRedraw:false,
+            enabledLayers: {
+            }
         };
+
+        const layerTypes = ["fill", "line", "symbol", "circle", "heatmap", "fill-extrusion", "raster", "raster-particle", "hillshade", "model", "background", "sky"];
+
+        for (const layerType of layerTypes) {
+            this._debugParams.enabledLayers[layerType] = true;
+        }
 
         tp.registerParameter(this._debugParams, ["Terrain"], "showTerrainProxyTiles", {}, () => {
             this.style.map.triggerRepaint();
         });
+
+        tp.registerParameter(this._debugParams, ["FPS"], "fpsWindow", {min: 1, max: 100, step: 1});
+        tp.registerBinding(this._debugParams, ["FPS"], 'continousRedraw', {
+            readonly:true,
+            label: "continuous redraw"
+        });
+        tp.registerBinding(this, ["FPS"], '_averageFPS', {
+            readonly:true,
+            label: "value"
+        });
+        tp.registerBinding(this, ["FPS"], '_averageFPS', {
+            readonly:true,
+            label: "graph",
+            view:'graph',
+            min: 0,
+            max: 200
+        });
+        // Layers
+        for (const layerType of layerTypes) {
+            tp.registerParameter(this._debugParams.enabledLayers, ["Debug", "Layers"], layerType);
+        }
 
         this.setup();
 
@@ -577,15 +617,43 @@ class Painter {
         return this.currentLayer < this.opaquePassCutoff;
     }
 
+    updateAverageFPS() {
+        const curTime = new Date().getTime();
+        const dt = curTime - this._timeStamp;
+        this._timeStamp = curTime;
+
+        const fps = dt === 0 ? 0 : 1000.0 / dt;
+
+        this._fpsHistory.push(fps);
+        if (this._fpsHistory.length > this._debugParams.fpsWindow) {
+            this._fpsHistory.splice(0, this._fpsHistory.length - this._debugParams.fpsWindow);
+        }
+
+        this._averageFPS = Math.round(this._fpsHistory.reduce((accum: number, current: number) => { return accum + current / this._fpsHistory.length; }, 0));
+    }
+
     render(style: Style, options: PainterOptions) {
+        Debug.run(() => { this.updateAverageFPS(); });
+
         // Update debug cache, i.e. clear all unused buffers
         this._wireframeDebugCache.update(this.frameCounter);
 
+        this._debugParams.continousRedraw = style.map.repaint;
         this.style = style;
         this.options = options;
 
         const layers = this.style._mergedLayers;
-        const layerIds = this.style.order;
+
+        const layerIds = this.style.order.filter((id) => {
+            const layer = layers[id];
+
+            if (layer.type in this._debugParams.enabledLayers) {
+                return this._debugParams.enabledLayers[layer.type];
+            }
+
+            return true;
+        });
+
         const orderedLayers = layerIds.map(id => layers[id]);
         const sourceCaches = this.style._mergedSourceCaches;
 
@@ -1264,7 +1332,6 @@ class Painter {
         this.cache = this.cache || {};
         const defines = ((((options && options.defines) || []): any): string[]);
         const config = options && options.config;
-        const transformFeedback = options && options.transformFeedback;
         const overrideFog = options && options.overrideFog;
         const overrideRtt = options && options.overrideRtt;
 
@@ -1273,7 +1340,7 @@ class Painter {
         const key = Program.cacheKey(shaders[name], name, allDefines, config);
 
         if (!this.cache[key]) {
-            this.cache[key] = new Program(this.context, name, shaders[name], config, programUniforms[name], allDefines, transformFeedback);
+            this.cache[key] = new Program(this.context, name, shaders[name], config, programUniforms[name], allDefines);
         }
         return this.cache[key];
     }

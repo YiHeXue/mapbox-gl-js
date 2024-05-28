@@ -205,7 +205,8 @@ export default LngLat;
 
 /**
  * A `LngLatBounds` object represents a geographical bounding box,
- * defined by its southwest and northeast points in longitude and latitude.
+ * defined by its southwest and northeast points in [`longitude`](https://docs.mapbox.com/help/glossary/lat-lon/) and [`latitude`](https://docs.mapbox.com/help/glossary/lat-lon/).
+ * `Longitude` values are typically set between `-180` to `180`, but can exceed this range if `renderWorldCopies` is set to `true`. `Latitude` values must be within `-85.051129` to `85.051129`.
  *
  * If no arguments are provided to the constructor, a `null` bounding box is created.
  *
@@ -224,16 +225,17 @@ export class LngLatBounds {
     _ne: LngLat;
     _sw: LngLat;
 
-    // This constructor is too flexible to type. It should not be so flexible.
-    constructor(sw: any, ne: any) {
+    constructor(sw: [number, number, number, number] | [LngLatLike, LngLatLike] | LngLatLike | void, ne: LngLatLike | void) {
         if (!sw) {
             // noop
         } else if (ne) {
-            this.setSouthWest(sw).setNorthEast(ne);
+            this.setSouthWest(((sw: any): LngLatLike)).setNorthEast(ne);
         } else if (sw.length === 4) {
-            this.setSouthWest([sw[0], sw[1]]).setNorthEast([sw[2], sw[3]]);
+            const bounds = ((sw: any): [number, number, number, number]);
+            this.setSouthWest([bounds[0], bounds[1]]).setNorthEast([bounds[2], bounds[3]]);
         } else {
-            this.setSouthWest(sw[0]).setNorthEast(sw[1]);
+            const bounds = ((sw: any): [LngLatLike, LngLatLike]);
+            this.setSouthWest(bounds[0]).setNorthEast(bounds[1]);
         }
     }
 
@@ -420,7 +422,7 @@ export class LngLatBounds {
      * Returns the bounding box represented as an array.
      *
      * @returns {Array<Array<number>>} The bounding box represented as an array, consisting of the
-     *     southwest and northeast coordinates of the bounding represented as arrays of numbers.
+     * southwest and northeast coordinates of the bounding represented as arrays of numbers.
      * @example
      * const llb = new mapboxgl.LngLatBounds([-73.9876, 40.7661], [-73.9397, 40.8002]);
      * llb.toArray(); // = [[-73.9876, 40.7661], [-73.9397, 40.8002]]
@@ -433,7 +435,7 @@ export class LngLatBounds {
      * Return the bounding box represented as a string.
      *
      * @returns {string} The bounding box represents as a string of the format
-     *     `'LngLatBounds(LngLat(lng, lat), LngLat(lng, lat))'`.
+     * `'LngLatBounds(LngLat(lng, lat), LngLat(lng, lat))'`.
      * @example
      * const llb = new mapboxgl.LngLatBounds([-73.9876, 40.7661], [-73.9397, 40.8002]);
      * llb.toString(); // = "LngLatBounds(LngLat(-73.9876, 40.7661), LngLat(-73.9397, 40.8002))"

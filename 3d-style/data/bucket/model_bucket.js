@@ -15,6 +15,7 @@ import {tileToMeter} from '../../../src/geo/mercator_coordinate.js';
 import {instanceAttributes} from '../model_attributes.js';
 
 import type ModelStyleLayer from '../../style/style_layer/model_style_layer.js';
+import {isValidUrl} from '../../../src/style-spec/validate/validate_model.js';
 import type {EvaluationFeature} from '../../../src/data/evaluation_feature.js';
 import type {Mat4} from 'gl-matrix';
 import type {CanonicalTileID, OverscaledTileID} from '../../../src/source/tile_id.js';
@@ -102,8 +103,9 @@ class ModelBucket implements Bucket {
     terrainElevationMax: number;
 
     hasZoomDependentProperties: boolean;
+    modelUris: Array<string>;
+    modelsRequested: boolean;
 
-    /* $FlowIgnore[incompatible-type-arg] Doesn't need to know about all the implementations */
     constructor(options: BucketParameters<ModelStyleLayer>) {
         this.zoom = options.zoom;
         this.canonical = options.canonical;
@@ -129,6 +131,9 @@ class ModelBucket implements Bucket {
         this.terrainElevationMin = 0;
         this.terrainElevationMax = 0;
         this.validForDEMTile = {id: null, timestamp: 0};
+        this.modelUris = [];
+        this.modelsRequested = false;
+
     }
 
     populate(features: Array<IndexedFeature>, options: PopulateParameters, canonical: CanonicalTileID, tileTransform: TileTransform) {
@@ -137,13 +142,16 @@ class ModelBucket implements Bucket {
         this.lookup = new Uint8Array(this.lookupDim * this.lookupDim);
 
         for (const {feature, id, index, sourceLayerIndex} of features) {
+            // use non numeric id, if in properties, too.
+            const featureId = (id != null) ? id :
+                (feature.properties && feature.properties.hasOwnProperty("id")) ? feature.properties["id"] : undefined;
             const evaluationFeature = toEvaluationFeature(feature, needGeometry);
 
             // $FlowFixMe[method-unbinding]
             if (!this.layers[0]._featureFilter.filter(new EvaluationParameters(this.zoom), evaluationFeature, canonical)) continue;
 
             const bucketFeature: BucketFeature = {
-                id,
+                id: featureId,
                 sourceLayerIndex,
                 index,
                 geometry: needGeometry ? evaluationFeature.geometry : loadGeometry(feature, canonical, tileTransform),
@@ -174,6 +182,7 @@ class ModelBucket implements Bucket {
                 if (instances.idToFeaturesIndex.hasOwnProperty(id)) {
                     const feature = instances.features[instances.idToFeaturesIndex[id]];
                     this.evaluate(feature, states[id], instances, true);
+                    this.uploaded = false;
                 }
             }
         }
@@ -249,6 +258,12 @@ class ModelBucket implements Bucket {
                 perModelAttributes.instancedDataBuffer.destroy();
             }
         }
+        const modelManager = this.layers[0].modelManager;
+        if (modelManager && this.modelUris) {
+            for (const modelUri of this.modelUris) {
+                modelManager.removeModel(modelUri, "");
+            }
+        }
     }
 
     addFeature(feature: BucketFeature, geometry: Array<Array<Point>>, evaluationFeature: EvaluationFeature): string {
@@ -256,13 +271,23 @@ class ModelBucket implements Bucket {
         const modelIdProperty = layer.layout.get('model-id');
         assert(modelIdProperty);
         const modelId = modelIdProperty.evaluate(evaluationFeature, {}, this.canonical);
+
         if (!modelId) {
             warnOnce(`modelId is not evaluated for layer ${layer.id} and it is not going to get rendered.`);
             return modelId;
         }
+        // check if it's a valid model (absolute) URL
+        // otherwise is considered as an style defined model, and hence we don't need to
+        // load it here.
+        if (isValidUrl(modelId, false)) {
+            if (!this.modelUris.includes(modelId)) {
+                this.modelUris.push(modelId);
+            }
+        }
         if (!this.instancesPerModel[modelId]) {
             this.instancesPerModel[modelId] = new PerModelAttributes();
         }
+
         const perModelVertexArray = this.instancesPerModel[modelId];
         const instancedDataArray = perModelVertexArray.instancedDataArray;
 
@@ -298,6 +323,10 @@ class ModelBucket implements Bucket {
             this.evaluate(modelFeature, {}, perModelVertexArray, false);
         }
         return modelId;
+    }
+
+    getModelUris(): Array<string> {
+        return this.modelUris;
     }
 
     evaluate(feature: ModelFeature, featureState: FeatureStates, perModelVertexArray: PerModelAttributes, update: boolean) {

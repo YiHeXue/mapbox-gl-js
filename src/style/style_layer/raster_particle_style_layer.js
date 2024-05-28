@@ -8,7 +8,7 @@ import {renderColorRamp} from '../../util/color_ramp.js';
 import {RGBAImage} from '../../util/image.js';
 
 import type {ConfigOptions} from "../properties";
-import type MapboxMap from '../../ui/map.js';
+import type {Map as MapboxMap} from '../../ui/map.js';
 import type {PaintProps} from './raster_particle_style_layer_properties.js';
 import type {LayerSpecification} from '../../style-spec/types.js';
 import type Texture from '../../render/texture.js';
@@ -24,8 +24,8 @@ class RasterParticleStyleLayer extends StyleLayer {
 
     colorRamp: RGBAImage;
     colorRampTexture: ?Texture;
-    transformFeedbackObject: any;
     tileFramebuffer: Framebuffer;
+    particleFramebuffer: Framebuffer;
 
     previousDrawTimestamp: ?number;
     lastInvalidatedAt: number;
@@ -33,24 +33,21 @@ class RasterParticleStyleLayer extends StyleLayer {
     constructor(layer: LayerSpecification, scope: string, options?: ?ConfigOptions) {
         super(layer, properties, scope, options);
         this._updateColorRamp();
-
-        this.onRemove = (map: MapboxMap): void => {
-            if (this.colorRampTexture) {
-                this.colorRampTexture.destroy();
-            }
-
-            if (this.transformFeedbackObject) {
-                const gl = map.painter.context.gl;
-                // $FlowFixMe[prop-missing]
-                gl.deleteTransformFeedback(this.transformFeedbackObject);
-            }
-
-            if (this.tileFramebuffer) {
-                this.tileFramebuffer.destroy();
-            }
-        };
-
         this.lastInvalidatedAt = browser.now();
+    }
+
+    onRemove(_: MapboxMap): void {
+        if (this.colorRampTexture) {
+            this.colorRampTexture.destroy();
+        }
+
+        if (this.tileFramebuffer) {
+            this.tileFramebuffer.destroy();
+        }
+
+        if (this.particleFramebuffer) {
+            this.particleFramebuffer.destroy();
+        }
     }
 
     hasColorMap(): boolean {
@@ -66,8 +63,7 @@ class RasterParticleStyleLayer extends StyleLayer {
         return this.visibility !== 'none';
     }
 
-    // $FlowFixMe[method-unbinding]
-    isLayerDraped(_: ?SourceCache): boolean {
+    isDraped(_: ?SourceCache): boolean {
         return false;
     }
 
