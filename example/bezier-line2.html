@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mapbox GL JS debug page</title>
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <link rel='stylesheet' href='../dist/mapbox-gl.css' />
+    <style>
+        body { margin: 0; padding: 0; }
+        html, body, #map { height: 100%; }
+    </style>
+</head>
+
+<body>
+<div id='map'></div>
+
+
+<script src='../dist/mapbox-gl-dev.js'></script>
+<script src='../debug/access_token_generated.js'></script>
+<script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
+<script>
+
+var map = window.map = new mapboxgl.Map({
+    container: 'map',
+    devtools: true,
+    zoom: 12.5,
+    center: [-77.01866, 38.888],
+    style: 'mapbox://styles/mapbox/streets-v10',
+    hash: true
+});
+
+var clicks = [];
+
+map.on('load', function() {
+    map.addSource('bezier-line', {
+        type: 'geojson',
+        data: {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+                type: 'LineString',
+                coordinates: []
+            }
+        }
+    });
+
+    map.addLayer({
+        id: 'bezier-line',
+        type: 'line',
+        source: 'bezier-line',
+        layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+        },
+        paint: {
+            'line-color': '#888',
+            'line-width': 3
+        }
+    });
+
+    // 添加箭头源
+    map.addSource('arrow', {
+        type: 'geojson',
+        data: {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+                type: 'LineString',
+                coordinates: []
+            }
+        }
+    });
+
+    // 添加箭头图层
+    map.addLayer({
+        id: 'arrow',
+        type: 'line',
+        source: 'arrow',
+        layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+        },
+        paint: {
+            'line-color': '#888',
+            'line-width': 3
+        }
+    });
+
+    map.on('click', function(e) {
+        clicks.push([e.lngLat.lng, e.lngLat.lat]);
+
+        if (clicks.length >= 3) {
+            var line = turf.bezierSpline({
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                    type: 'LineString',
+                    coordinates: clicks
+                }
+            });
+
+            map.getSource('bezier-line').setData(line);
+
+            // 计算箭头
+            var length = line.geometry.coordinates.length;
+            var end = line.geometry.coordinates[length - 1];
+            var preEnd = line.geometry.coordinates[length - 2];
+            var bearing = turf.bearing(preEnd, end);
+
+            // 计算箭头的两个尖端
+            var arrowLength = 0.05;  // 调整这个值来改变箭头大小
+            var arrowAngle = 20;  // 调整这个值来改变箭头的角度
+            var leftWing = turf.destination(end, arrowLength, bearing - 180 + arrowAngle);
+            var rightWing = turf.destination(end, arrowLength, bearing - 180 - arrowAngle);
+
+            // 创建箭头的 GeoJSON
+            var arrowLine = {
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                    type: 'LineString',
+                    coordinates: [
+                        leftWing.geometry.coordinates,
+                        end,
+                        rightWing.geometry.coordinates
+                    ]
+                }
+            };
+
+            map.getSource('arrow').setData(arrowLine);
+        }
+    });
+});
+
+</script>
+</body>
+</html>
