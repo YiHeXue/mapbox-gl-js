@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mapbox GL JS debug page</title>
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <link rel='stylesheet' href='../dist/mapbox-gl.css' />
+    <style>
+        body { margin: 0; padding: 0; }
+        html, body, #map { height: 100%; }
+    </style>
+</head>
+
+<body>
+<div id='map'></div>
+
+<script src='../dist/mapbox-gl-dev.js'></script>
+<script src='../debug/access_token_generated.js'></script>
+<script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
+<script>
+
+var map = window.map = new mapboxgl.Map({
+    container: 'map',
+    devtools: true,
+    zoom: 12.5,
+    center: [-77.01866, 38.888],
+    style: 'mapbox://styles/mapbox/streets-v10',
+    hash: true
+});
+
+var clicks = [];
+var isDrawingFinished = false;
+var lastClickTime = 0;
+var doubleClickThreshold = 300; // 双击的时间阈值（毫秒）
+
+map.on('load', function() {
+    map.addSource('bezier-line', {
+        type: 'geojson',
+        data: {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+                type: 'LineString',
+                coordinates: []
+            }
+        }
+    });
+
+    map.addLayer({
+        id: 'bezier-line',
+        type: 'line',
+        source: 'bezier-line',
+        layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+        },
+        paint: {
+            'line-color': '#888',
+            'line-width': 3
+        }
+    });
+
+    function updateLine(currentPoint) {
+        var lineCoordinates = isDrawingFinished ? clicks : [...clicks, currentPoint];
+        var line;
+        if (lineCoordinates.length >= 3) {
+            line = turf.bezierSpline({
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                    type: 'LineString',
+                    coordinates: lineCoordinates
+                }
+            });
+        } else {
+            line = {
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                    type: 'LineString',
+                    coordinates: lineCoordinates
+                }
+            };
+        }
+
+        // 添加箭头
+        var length = line.geometry.coordinates.length;
+
+        var end = line.geometry.coordinates[length - 1 ];
+        var preEnd = line.geometry.coordinates[length - 2 ];
+        var bearing = turf.bearing(preEnd, end);
+
+        var arrowLength = 0.05;
+        var arrowAngle = 20;
+        var leftWing = turf.destination(end, arrowLength, bearing - 180 + arrowAngle);
+        var rightWing = turf.destination(end, arrowLength, bearing - 180 - arrowAngle);
+
+        // 将箭头添加到线条的坐标中
+        line.geometry.coordinates.push(leftWing.geometry.coordinates);
+        line.geometry.coordinates.push(end);
+        line.geometry.coordinates.push(rightWing.geometry.coordinates);
+
+        map.getSource('bezier-line').setData(line);
+    }
+
+    map.on('mousemove', function(e) {
+        if (clicks.length > 0 && !isDrawingFinished) {
+            updateLine([e.lngLat.lng, e.lngLat.lat]);
+        }
+    });
+
+    map.on('click', function(e) {
+        var currentTime = new Date().getTime();
+        if (currentTime - lastClickTime < doubleClickThreshold) {
+            // 双击检测
+            if (clicks.length >= 2) {
+                isDrawingFinished = true;
+                updateLine(clicks[clicks.length - 1]); // 使用最后一个点更新
+            }
+        } else {
+            // 单击
+            clicks.push([e.lngLat.lng, e.lngLat.lat]);
+            updateLine([e.lngLat.lng, e.lngLat.lat]);
+        }
+        lastClickTime = currentTime;
+    });
+
+    // 防止双击缩放
+    map.doubleClickZoom.disable();
+});
+
+</script>
+</body>
+</html>
