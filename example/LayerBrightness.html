@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mapbox GL JS debug page</title>
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <link rel='stylesheet' href='../dist/mapbox-gl.css' />
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 10px;
+            background-color: white;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+
+<body>
+<div id="map"></div>
+<div id="controls">
+    <label>亮度: <input type="range" id="brightness" min="0" max="1" step="0.1" value="1"></label><br>
+    <label>对比度: <input type="range" id="contrast" min="0" max="1" step="0.1" value="1"></label><br>
+    <label>饱和度: <input type="range" id="saturation" min="0" max="1" step="0.1" value="1"></label><br>
+    <label>色调: <input type="range" id="hue" min="0" max="360" step="1" value="180"></label>
+</div>
+
+
+<script src='../dist/mapbox-gl-dev.js'></script>
+<script src='../debug/access_token_generated.js'></script>
+<script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
+<script>
+
+var map = window.map = new mapboxgl.Map({
+    container: 'map',
+    devtools: true,
+    center: [-122.619991, 45.536023], // starting position [lng, lat]
+    zoom: 10.5, // starting zoom
+    style: 'mapbox://styles/mapbox/streets-v10',
+    hash: true
+});
+
+map.on('load', function () {
+    map.addSource('portland', {
+        'type': 'raster',
+        'url': 'mapbox://examples.32xkp0wd'
+    });
+
+    map.addLayer({
+        'id': 'portland',
+        'source': 'portland',
+        'type': 'raster'
+    });
+
+    // 控制滑动条
+    function updateBrightnessFilters() {
+        const brightness = document.getElementById('brightness').value;
+        map.setPaintProperty('portland', 'raster-brightness-min', parseFloat(brightness));
+    }
+    function updateContrastFilters() {
+        const contrast = document.getElementById('contrast').value;
+        map.setPaintProperty('portland', 'raster-contrast', parseFloat(contrast));
+    }
+    function updateSaturationFilters() {
+        const saturation = document.getElementById('saturation').value;
+        map.setPaintProperty('portland', 'raster-saturation', parseFloat(saturation));
+    }
+    function updateHueFilters() {
+        const saturation = document.getElementById('hue').value;
+        map.setPaintProperty('portland', 'raster-hue-rotate', parseFloat(saturation));
+        console.log('色调：'+ parseInt(saturation))
+    }
+
+    function updateColor() {
+        const r = document.getElementById('rRange').value;
+        const g = document.getElementById('gRange').value;
+        const b = document.getElementById('bRange').value;
+        const color = `rgb(${r}, ${g}, ${b})`;
+
+        map.setPaintProperty('portland', 'fill-color', color); // 假设这是一个填充图层
+    }
+
+    document.getElementById('brightness').addEventListener('input', updateBrightnessFilters);
+    document.getElementById('contrast').addEventListener('input', updateContrastFilters);
+    document.getElementById('saturation').addEventListener('input', updateSaturationFilters);
+    document.getElementById('hue').addEventListener('input', updateHueFilters);
+
+
+});
+
+</script>
+</body>
+</html>
