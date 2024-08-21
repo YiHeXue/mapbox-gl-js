@@ -109,10 +109,8 @@
 <script>
     class MeatureTool {
         map = void 0
-        sdMap = void 0
-        constructor(sdMap) {
-            this.sdMap = sdMap
-            this.map = sdMap.map
+        constructor(Map) {
+            this.map = Map
         }
 
         layerDistanceList = []
@@ -128,7 +126,6 @@
             this.layerDistanceList.push(layerId)
             var isMeasure = true
             const map = this.map
-            const sdMap = this.sdMap
             map.doubleClickZoom.disable()
             let catchMark = null
             let isEdit = false
@@ -595,17 +592,17 @@
 
             // 创建Marker
             function createMarker() {
-                const markerParam = {
-                    map: sdMap.map,
-                    imgUrl: pointMark,
-                    lngLat: [0, 0],
-                    height: 13,
-                    width: 13,
-                    size: 13,
-                    isDrag: false,
-                    cursor: 'default',
-                }
-                return sdMap.createMarker(markerParam)
+                // const markerParam = {
+                //     map: sdMap.map,
+                //     imgUrl: pointMark,
+                //     lngLat: [0, 0],
+                //     height: 13,
+                //     width: 13,
+                //     size: 13,
+                //     isDrag: false,
+                //     cursor: 'default',
+                // }
+                // return sdMap.createMarker(markerParam)
             }
 
             // 更新点集
@@ -790,7 +787,6 @@
             this.layerAreaList.push(layerId)
             var isMeasure = true
             const map = this.map
-            const sdMap = this.sdMap
             map.doubleClickZoom.disable()
             let catchMark = null
             let isEdit = false
@@ -1266,17 +1262,17 @@
 
             // 创建Marker
             function createMarker() {
-                const markerParam = {
-                    map: sdMap.map,
-                    imgUrl: pointMark,
-                    lngLat: [0, 0],
-                    height: 13,
-                    width: 13,
-                    size: 13,
-                    isDrag: false,
-                    cursor: 'default',
-                }
-                return sdMap.createMarker(markerParam)
+                // const markerParam = {
+                //     map: sdMap.map,
+                //     imgUrl: pointMark,
+                //     lngLat: [0, 0],
+                //     height: 13,
+                //     width: 13,
+                //     size: 13,
+                //     isDrag: false,
+                //     cursor: 'default',
+                // }
+                // return sdMap.createMarker(markerParam)
             }
 
             // 更新点集
