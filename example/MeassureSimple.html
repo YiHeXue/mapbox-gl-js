@@ -116,8 +116,6 @@
 
         layerDistanceList = []
         layerAreaList = []
-        setDistance = () => {}
-        setArea = () => { }
 
         /**
          * 测量距离
@@ -225,15 +223,6 @@
                     'circle-stroke-color': '#ffffff',
                 },
             })
-
-            // 清除面积测量
-            this.setArea = () => {
-                isMeasure = false
-                map.removeLayer('point-move' + layerId)
-                map.removeLayer('line-move' + layerId)
-
-                return isMeasure
-            }
 
             /**
              * 添加点
@@ -567,14 +556,6 @@
                 },
             })
 
-            this.setDistance = () => {
-                isMeasure = false
-                map.removeLayer('point-move' + layerId)
-                map.removeLayer('line-move' + layerId)
-
-                return isMeasure
-            }
-
             /**
              * 添加点
              * @param {*} _e
@@ -829,9 +810,457 @@
 
         /**
          * 测量方位角
-         * @param {*} layerId measureAzimuth
+         * @param {*} layerId
          */
-     
+        measureAzimuth(layerId) {
+            this.layerDistanceList.push(layerId)
+            let isMeasure = true;
+            const map = this.map
+            map.doubleClickZoom.disable()
+            let catchMark = null
+
+            const jsonPoint = {
+                type: 'FeatureCollection',
+                features: [],
+            }
+            const jsonLine = {
+                type: 'FeatureCollection',
+                features: [],
+            }
+
+            const jsonArrow = {
+                type: 'FeatureCollection',
+                features: [],
+            }
+
+            // 添加测量结果弹窗
+            const ele = document.createElement('div')
+            ele.setAttribute('class', 'measure-move')
+            const option = {
+                element: ele,
+                anchor: 'left',
+                offset: [8, 0],
+            }
+            const tooltip = new mapboxgl.Marker(option).setLngLat([0, 0]).addTo(map)
+
+            // 添加测量图层
+            map.addSource('points' + layerId, {
+                type: 'geojson',
+                data: jsonPoint,
+            })
+            map.addSource('point-move' + layerId, {
+                type: 'geojson',
+                data: jsonPoint,
+            })
+            map.addSource('line' + layerId, {
+                type: 'geojson',
+                data: jsonLine,
+            })
+            map.addSource('lineArrow' + layerId, {
+                type: 'geojson',
+                data: jsonArrow,
+            })
+            map.addSource('line-move' + layerId, {
+                type: 'geojson',
+                data: jsonLine,
+            })
+            map.addSource('point-follow' + layerId, {
+                type: 'geojson',
+                data: jsonPoint,
+            })
+
+            map.addLayer({
+                id: 'line' + layerId,
+                type: 'line',
+                source: 'line' + layerId,
+                paint: {
+                    'line-color': '#ff0000',
+                    'line-width': 2,
+                    'line-opacity': 0.65,
+                },
+            })
+
+            map.addLayer({
+                id: 'lineArrow' + layerId,
+                type: 'line',
+                source: 'lineArrow' + layerId,
+                paint: {
+                    'line-color': '#ff0000',
+                    'line-width': 2,
+                    'line-opacity': 0.65,
+                },
+            })
+
+            map.addLayer({
+                id: 'line-move' + layerId,
+                type: 'line',
+                source: 'line-move' + layerId,
+                paint: {
+                    'line-color': '#ff0000',
+                    'line-width': 2,
+                    'line-opacity': 0.65,
+                    'line-dasharray': [5, 2],
+                },
+            })
+
+            map.addLayer({
+                id: 'points' + layerId,
+                type: 'circle',
+                source: 'points' + layerId,
+                paint: {
+                    'circle-color': '#ffffff',
+                    'circle-radius': 3.5,
+                    'circle-stroke-width': 1.5,
+                    'circle-stroke-color': '#ff0000',
+                },
+            })
+            map.addLayer({
+                id: 'point-move' + layerId,
+                type: 'circle',
+                source: 'point-move' + layerId,
+                paint: {
+                    'circle-color': '#ffffff',
+                    'circle-radius': 3.5,
+                    'circle-stroke-width': 1.5,
+                    'circle-stroke-color': '#ff0000',
+                },
+            })
+            // 活动点可以选择用图层，也可以选择用Mark
+            map.addLayer({
+                id: 'point-follow' + layerId,
+                type: 'circle',
+                source: 'point-follow' + layerId,
+                paint: {
+                    'circle-color': '#199afc',
+                    'circle-radius': 5.5,
+                    'circle-stroke-width': 1.5,
+                    'circle-stroke-color': '#ffffff',
+                },
+            })
+
+
+            /**
+             * 添加点
+             * @param {*} _e
+             */
+            function addPointforJSON(_e) {
+                if (isMeasure) {
+                    const point = {
+                        type: 'Feature',
+                        geometry: {
+                            type: 'Point',
+                            coordinates: [_e.lngLat.lng, _e.lngLat.lat],
+                        },
+                        properties: {
+                            id: String(new Date().getTime()),
+                        },
+                    }
+                    jsonPoint.features.push(point)
+                    map.getSource('points' + layerId).setData(jsonPoint)
+                    drawLine(jsonPoint)
+
+                    // 添加箭头
+                    var length = jsonPoint.features.length;
+                    if(length===2){
+                        var end = jsonPoint.features[length - 1 ].geometry.coordinates;
+                        var preEnd = jsonPoint.features[length - 2 ].geometry.coordinates;
+                        var bearing = turf.bearing(preEnd, end);
+
+                        var arrowLength = 0.05;
+                        var arrowAngle = 20;
+                        var leftWing = turf.destination(end, arrowLength, bearing - 180 + arrowAngle);
+                        var rightWing = turf.destination(end, arrowLength, bearing - 180 - arrowAngle);
+                        const pointLeftWing = {
+                            type: 'Feature',
+                            geometry: {
+                                type: 'Point',
+                                coordinates: leftWing.geometry.coordinates,
+                            },
+                            properties: {
+                                id: String(new Date().getTime()),
+                            },
+                        }
+                        jsonArrow.features.push(pointLeftWing)
+                        const pointEnd = {
+                            type: 'Feature',
+                            geometry: {
+                                type: 'Point',
+                                coordinates: end,
+                            },
+                            properties: {
+                                id: String(new Date().getTime()),
+                            },
+                        }
+                        jsonArrow.features.push(pointEnd)
+                        const pointRightWing = {
+                            type: 'Feature',
+                            geometry: {
+                                type: 'Point',
+                                coordinates: rightWing.geometry.coordinates,
+                            },
+                            properties: {
+                                id: String(new Date().getTime()),
+                            },
+                        }
+                        jsonArrow.features.push(pointRightWing)
+
+                        drawLineArrow(jsonArrow)
+                    }
+
+                    addMeasureRes(jsonPoint)
+                }
+            }
+
+            /**
+             * 绘制线
+             * @param {*} jsonPoint
+             */
+            function drawLine(jsonPoint) {
+                if (jsonPoint.features.length > 1) {
+                    jsonLine.features = []
+                    for (let i = 0; i < jsonPoint.features.length - 1; i++) {
+                        const coords = jsonPoint.features[i].geometry.coordinates
+                        const next_coords = jsonPoint.features[i + 1].geometry.coordinates
+                        jsonLine.features.push({
+                            type: 'Feature',
+                            geometry: {
+                                type: 'LineString',
+                                coordinates: [coords, next_coords],
+                            },
+                        })
+                    }
+                    map.getSource('line' + layerId).setData(jsonLine)
+                }
+            }
+
+            /**
+             * 绘制箭头
+             * @param {*} jsonPoint
+             */
+            function drawLineArrow(jsonPoint) {
+                if (jsonPoint.features.length > 1) {
+                    jsonLine.features = []
+                    for (let i = 0; i < jsonPoint.features.length - 1; i++) {
+                        const coords = jsonPoint.features[i].geometry.coordinates
+                        const next_coords = jsonPoint.features[i + 1].geometry.coordinates
+                        jsonLine.features.push({
+                            type: 'Feature',
+                            geometry: {
+                                type: 'LineString',
+                                coordinates: [coords, next_coords],
+                            },
+                        })
+                    }
+                    map.getSource('lineArrow' + layerId).setData(jsonLine)
+                }
+            }
+
+            /**
+             * 添加dom
+             * @param {*} jsonPoint 点集
+             */
+            function addMeasureRes(jsonPoint) {
+                if (jsonPoint.features.length === 2) {
+                    debugger
+                    removedom()
+                    const pointList = []
+                    for (let i = 0; i < jsonPoint.features.length; i++) {
+                        const coords = jsonPoint.features[i].geometry.coordinates
+                        pointList.push(coords)
+                    }
+                   if(jsonPoint.features.length ===2){
+                       const clear = document.createElement('div')
+                       clear.setAttribute('class', `measure-result ${layerId} clear`)
+                       clear.onclick = (__e) => {
+                           // 全部删除
+                           __e.stopPropagation()
+                           removeLayer()
+                           map.off('mousedown', onmousedown)
+                           if (catchMark) {
+                               catchMark.remove()
+                           }
+                       }
+
+
+                       if(jsonPoint.features.length ===2 &&pointList.length === 2){
+                           const element = document.createElement('div')
+                           element.setAttribute('class', 'measure-result ' + layerId)
+                           const option = {
+                               element: element,
+                               anchor: 'left',
+                               offset: [8, 0],
+                           }
+                           element.innerHTML =  getAzimuth(pointList)
+                           element.appendChild(clear)
+                       new mapboxgl.Marker(option).setLngLat(jsonPoint.features[jsonPoint.features.length-1].geometry.coordinates).addTo(map)
+                       }
+                       finish()
+                   }
+                }
+            }
+
+            /**
+             * 移除点
+             * @param {*} coords 点坐标
+             */
+            function removePoint(coords) {
+                if (jsonPoint.features.length > 0) {
+                    if (jsonPoint.features.length === 2) {
+                        jsonPoint.features = []
+                        jsonLine.features = []
+                        map.getSource('points' + layerId).setData(jsonPoint)
+                        map.getSource('line' + layerId).setData(jsonLine)
+                        removedom()
+                    } else {
+                        for (let i = 0; i < jsonPoint.features.length; i++) {
+                            if (
+                                (jsonPoint.features[i].geometry.coordinates[0] === coords[0]) &
+                                (jsonPoint.features[i].geometry.coordinates[1] === coords[1])
+                            ) {
+                                jsonPoint.features.splice(i, 1)
+                            }
+                        }
+                        drawLine(jsonPoint)
+                        addMeasureRes(jsonPoint)
+                        map.getSource('points' + layerId).setData(jsonPoint)
+                    }
+                }
+            }
+
+            /**
+             * 计算长度
+             * @param {*} pointList
+             * @returns
+             */
+            function getAzimuth(pointList) {
+              const angle = getAngleHandle(...pointList.flat())
+                let text =angle.toFixed(2)+'°'
+                return text
+            }
+
+            /**
+             * 获取两点位之间的角度
+             * @param lng1
+             * @param lat1
+             * @param lng2
+             * @param lat2
+             * @returns {number}
+             */
+            function getAngleHandle (lng1, lat1, lng2, lat2) {
+                const a = (90 - lat2) * Math.PI / 180
+                const b = (90 - lat1) * Math.PI / 180
+                const AOC_BOC = (lng2 - lng1) * Math.PI / 180
+                const cosc = Math.cos(a) * Math.cos(b) + Math.sin(a) * Math.sin(b) * Math.cos(AOC_BOC)
+                const sinc = Math.sqrt(1 - cosc * cosc)
+                const sinA = Math.sin(a) * Math.sin(AOC_BOC) / sinc
+                const A = Math.asin(sinA) * 180 / Math.PI
+                let res = 0
+                if (lng2 > lng1 && lat2 > lat1) {
+                    res = A
+                } else if (lng2 > lng1 && lat2 < lat1) {
+                    res = 180 - A
+                } else if (lng2 < lng1 && lat2 < lat1) {
+                    res = 180 - A
+                } else if (lng2 < lng1 && lat2 > lat1) {
+                    res = 360 + A
+                } else if (lng2 > lng1 && lat2 === lat1) {
+                    res = 90
+                } else if (lng2 < lng1 && lat2 === lat1) {
+                    res = 270
+                } else if (lng2 === lng1 && lat2 > lat1) {
+                    res = 0
+                } else if (lng2 === lng1 && lat2 < lat1) {
+                    res = 180
+                }
+                return res
+            }
+
+            /**
+             * 移除dom
+             */
+            function removedom() {
+                const dom = document.getElementsByClassName('measure-result ' + layerId)
+                const len = dom.length
+                if (len) {
+                    for (let i = len - 1; i >= 0; i--) {
+                        if (dom[i]) dom[i].remove()
+                    }
+                }
+            }
+
+            /**
+             * 移除图层
+             */
+            function removeLayer() {
+                jsonPoint.features = []
+                jsonLine.features = []
+                map.removeLayer('points' + layerId)
+                map.removeLayer('line' + layerId)
+                map.removeLayer('lineArrow' + layerId)
+                removedom()
+            }
+
+            /**
+             * 鼠标move事件
+             * @param {} _e
+             */
+            function mouseMove(_e) {
+                if (isMeasure) {
+                    map.getCanvas().style.cursor = 'default'
+                    var coords = [_e.lngLat.lng, _e.lngLat.lat]
+                    const jsonp = {
+                        type: 'Feature',
+                        geometry: {
+                            type: 'Point',
+                            coordinates: coords,
+                        },
+                    }
+                    map.getSource('point-move' + layerId).setData(jsonp)
+
+                    if (jsonPoint.features.length > 1) {
+                        const pointList = []
+                        for (let i = 0; i < jsonPoint.features.length; i++) {
+                            const coord = jsonPoint.features[i].geometry.coordinates
+                            pointList.push(coord)
+                        }
+                        pointList.push(coords)
+                        const prev = jsonPoint.features[jsonPoint.features.length - 1]
+                        const jsonl = {
+                            type: 'Feature',
+                            geometry: {
+                                type: 'LineString',
+                                coordinates: [prev.geometry.coordinates, coords],
+                            },
+                        }
+                        map.getSource('line-move' + layerId).setData(jsonl)
+                        ele.innerHTML = getAzimuth(pointList)
+                        tooltip.setLngLat(coords)
+                    }
+                }
+            }
+
+            /**
+             * 绘制完成
+             * @param {*} _e
+             */
+            function finish() {
+                if (isMeasure) {
+                    isMeasure = false
+                    map.removeLayer('point-move' + layerId)
+                    map.removeLayer('line-move' + layerId)
+                    map.getCanvas().style.cursor = 'default'
+                    tooltip.remove()
+                }
+            }
+
+            map.on('click', function (_e) {
+                addPointforJSON(_e)
+            })
+
+            map.on('mousemove', function (_e) {
+                mouseMove(_e)
+            })
+        }
 
         /**
          * 清除所有测量要素
@@ -894,8 +1323,6 @@ var map = window.map = new mapboxgl.Map({
             meatureTool = new MeatureTool(map)
         }
         meatureTool.measureDistance(layerId)
-        // 防止函数冲突
-        meatureTool.setDistance()
     }
     // 测量面积
     function measureArea() {
@@ -905,8 +1332,7 @@ var map = window.map = new mapboxgl.Map({
             meatureTool = new MeatureTool(map)
         }
         meatureTool.measureArea(layerId)
-        // 防止函数冲突
-        meatureTool.setArea()
+
     }
 
     // 测量方位角
@@ -917,8 +1343,7 @@ var map = window.map = new mapboxgl.Map({
             meatureTool = new MeatureTool(map)
         }
         meatureTool.measureAzimuth(layerId)
-        // 防止函数冲突
-        meatureTool.setArea()
+
     }
     // 清除测量结果
     function clearAll() {
