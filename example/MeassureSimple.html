@@ -1674,18 +1674,6 @@
                         const coords = jsonPoint.features[i].geometry.coordinates
                         pointList.push(coords)
 
-                        const close = document.createElement('div')
-                        close.setAttribute('class', `measure-result ${layerId} close`)
-                        close.onclick = (__e) => {
-                            // 移除点
-                            __e.stopPropagation()
-                            removePoint(coords)
-                            map.off('mousedown', onmousedown)
-                            if (catchMark) {
-                                catchMark.remove()
-                            }
-                        }
-
                         const clear = document.createElement('div')
                         clear.setAttribute('class', `measure-result ${layerId} clear`)
                         clear.onclick = (__e) => {
@@ -1707,9 +1695,9 @@
                         }
                         element.innerHTML =  getGPS(coords)
                         if ((jsonPoint.features.length === i + 1) & !isMeasure) {
-                            element.appendChild(clear)
+
                         }
-                        element.appendChild(close)
+                        element.appendChild(clear)
                         new mapboxgl.Marker(option).setLngLat(coords).addTo(map)
                     }
                 }
