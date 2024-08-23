@@ -1577,10 +1577,6 @@
                 type: 'FeatureCollection',
                 features: [],
             }
-            const jsonLine = {
-                type: 'FeatureCollection',
-                features: [],
-            }
 
             // 添加测量结果弹窗
             const ele = document.createElement('div')
@@ -1763,7 +1759,6 @@
              */
             function removeLayer() {
                 jsonPoint.features = []
-                jsonLine.features = []
                 map.removeLayer('points' + layerId)
                 removedom()
             }
