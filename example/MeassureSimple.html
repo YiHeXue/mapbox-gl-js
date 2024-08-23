@@ -117,6 +117,8 @@
 
         layerDistanceList = []
         layerAreaList = []
+        layerAzimuthList = []
+        layerAngleList = []
 
         /**
          * 测量距离
@@ -814,7 +816,7 @@
          * @param {*} layerId
          */
         measureAzimuth(layerId) {
-            this.layerDistanceList.push(layerId)
+            this.layerAzimuthList.push(layerId)
             let isMeasure = true;
             const map = this.map
             map.doubleClickZoom.disable()
@@ -825,6 +827,10 @@
                 features: [],
             }
             const jsonLine = {
+                type: 'FeatureCollection',
+                features: [],
+            }
+            const jsonArrow = {
                 type: 'FeatureCollection',
                 features: [],
             }
@@ -1235,7 +1241,7 @@
          * @param {*} layerId
          */
         measureAngle(layerId) {
-            this.layerDistanceList.push(layerId)
+            this.layerAngleList.push(layerId)
             let isMeasure = true;
             const map = this.map
             map.doubleClickZoom.disable()
@@ -1606,6 +1612,37 @@
                 }
             }
             this.layerAreaList = []
+            if (this.layerAzimuthList) {
+                for (let i = 0; i < this.layerAzimuthList.length; i++) {
+                    const layerid = this.layerAzimuthList[i]
+                    try {
+                        this.map.removeLayer('points' + layerid)
+                        this.map.removeLayer('line' + layerid)
+                        this.map.removeLayer('lineArrow' + layerid)
+                        this.map.removeLayer('point-move' + layerid)
+                        this.map.removeLayer('line-move' + layerid)
+                    } catch (error) {
+                        console.log(error)
+                    }
+                }
+            }
+            this.layerAzimuthList = []
+            if (this.layerAngleList) {
+                for (let i = 0; i < this.layerAngleList.length; i++) {
+                    const layerid = this.layerAngleList[i]
+                    try {
+                        this.map.removeLayer('points' + layerid)
+                        this.map.removeLayer('line' + layerid)
+                        this.map.removeLayer('lineArrow' + layerid)
+                        this.map.removeLayer('point-move' + layerid)
+                        this.map.removeLayer('line-move' + layerid)
+                    } catch (error) {
+                        console.log(error)
+                    }
+                }
+            }
+            this.layerAngleList = []
+
             this.map.doubleClickZoom.enable()
         }
     }
