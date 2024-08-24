@@ -2159,7 +2159,7 @@
                     }
                     map.getSource('point-move' + layerId).setData(jsonp)
 
-                    if (jsonPoint.features.length > 2) {
+                    if (jsonPoint.features.length > 0) {
                         const pointList = []
                         for (let i = 0; i < jsonPoint.features.length; i++) {
                             const coord = jsonPoint.features[i].geometry.coordinates
@@ -2175,8 +2175,10 @@
                             },
                         }
                         map.getSource('line-move' + layerId).setData(jsonl)
-                        ele.innerHTML = getAngle(pointList)
-                        tooltip.setLngLat(prev.geometry.coordinates)
+                       if(jsonPoint.features.length>1){
+                           ele.innerHTML = getAngle(pointList)
+                           tooltip.setLngLat(prev.geometry.coordinates)
+                       }
                     }
                 }
             }
