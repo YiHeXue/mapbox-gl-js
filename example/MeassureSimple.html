@@ -117,7 +117,6 @@
             let isMeasure = true;
             const map = this.map
             map.doubleClickZoom.disable()
-            let catchMark = null
 
             const jsonPoint = {
                 type: 'FeatureCollection',
@@ -279,9 +278,7 @@
                             __e.stopPropagation()
                             removePoint(coords)
                             map.off('mousedown', onmousedown)
-                            if (catchMark) {
-                                catchMark.remove()
-                            }
+
                         }
 
                         const clear = document.createElement('div')
@@ -291,9 +288,7 @@
                             __e.stopPropagation()
                             removeLayer()
                             map.off('mousedown', onmousedown)
-                            if (catchMark) {
-                                catchMark.remove()
-                            }
+
                         }
 
                         const element = document.createElement('div')
@@ -458,7 +453,6 @@
             var isMeasure = true
             const map = this.map
             map.doubleClickZoom.disable()
-            let catchMark = null
 
             const jsonPoint = {
                 type: 'FeatureCollection',
@@ -588,9 +582,7 @@
                             __e.stopPropagation()
                             removePoint(coords)
                             map.off('mousedown', onmousedown)
-                            if (catchMark) {
-                                catchMark.remove()
-                            }
+
                         }
                         if ((jsonPoint.features.length === i + 1) & !isMeasure) {
                             const clear = document.createElement('div')
@@ -600,9 +592,7 @@
                                 __e.stopPropagation()
                                 removeLayer()
                                 map.off('mousedown', onmousedown)
-                                if (catchMark) {
-                                    catchMark.remove()
-                                }
+
                             }
 
                             const element = document.createElement('div')
@@ -808,7 +798,6 @@
             var isMeasure = true
             const map = this.map
             map.doubleClickZoom.disable()
-            let catchMark = null
 
             const jsonPoint = {
                 type: 'FeatureCollection',
@@ -944,9 +933,7 @@
                             __e.stopPropagation()
                             removeLayer()
                             map.off('mousedown', onmousedown)
-                            if (catchMark) {
-                                catchMark.remove()
-                            }
+
                         }
 
                         const element = document.createElement('div')
@@ -1146,7 +1133,6 @@
             var isMeasure = true
             const map = this.map
             map.doubleClickZoom.disable()
-            let catchMark = null
 
             const jsonPoint = {
                 type: 'FeatureCollection',
@@ -1295,9 +1281,7 @@
                             __e.stopPropagation()
                             removeLayer()
                             map.off('mousedown', onmousedown)
-                            if (catchMark) {
-                                catchMark.remove()
-                            }
+
                         }
 
                         const element = document.createElement('div')
@@ -1453,7 +1437,6 @@
             let isMeasure = true;
             const map = this.map
             map.doubleClickZoom.disable()
-            let catchMark = null
 
             const jsonPoint = {
                 type: 'FeatureCollection',
@@ -1710,9 +1693,7 @@
                            __e.stopPropagation()
                            removeLayer()
                            map.off('mousedown', onmousedown)
-                           if (catchMark) {
-                               catchMark.remove()
-                           }
+
                        }
 
 
@@ -1877,7 +1858,6 @@
             let isMeasure = true;
             const map = this.map
             map.doubleClickZoom.disable()
-            let catchMark = null
 
             const jsonPoint = {
                 type: 'FeatureCollection',
@@ -2046,9 +2026,7 @@
                             __e.stopPropagation()
                             removeLayer()
                             map.off('mousedown', onmousedown)
-                            if (catchMark) {
-                                catchMark.remove()
-                            }
+
                         }
 
 
@@ -2215,7 +2193,6 @@
             let isMeasure = true;
             const map = this.map
             map.doubleClickZoom.disable()
-            let catchMark = null
 
             const jsonPoint = {
                 type: 'FeatureCollection',
@@ -2321,9 +2298,7 @@
                             __e.stopPropagation()
                             removeLayer()
                             map.off('mousedown', onmousedown)
-                            if (catchMark) {
-                                catchMark.remove()
-                            }
+
                         }
 
                         const element = document.createElement('div')
@@ -2349,13 +2324,8 @@
              * @returns
              */
             function getGPS(coords) {
-                let len = '经度：'+coords[0].toFixed(4)+' 纬度：'+coords[1].toFixed(4);
-                // if (len < 1) {
-                //     len = Math.round(len * 1000) + '米'
-                // } else {
-                //     len = len.toFixed(2) + '公里'
-                // }
-                return len
+                let text = '经度：'+coords[0].toFixed(4)+' 纬度：'+coords[1].toFixed(4);
+                return text
             }
 
             /**
