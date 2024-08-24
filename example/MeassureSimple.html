@@ -2396,26 +2396,8 @@
                         },
                     }
                     map.getSource('point-move' + layerId).setData(jsonp)
-
-                    // if (jsonPoint.features.length > 0) {
-                    //     const pointList = []
-                    //     for (let i = 0; i < jsonPoint.features.length; i++) {
-                    //         const coord = jsonPoint.features[i].geometry.coordinates
-                    //         pointList.push(coord)
-                    //     }
-                    //     pointList.push(coords)
-                    //     const prev = jsonPoint.features[jsonPoint.features.length - 1]
-                    //     const jsonl = {
-                    //         type: 'Feature',
-                    //         geometry: {
-                    //             type: 'LineString',
-                    //             coordinates: [prev.geometry.coordinates, coords],
-                    //         },
-                    //     }
-                    //     map.getSource('line-move' + layerId).setData(jsonl)
-                    //     ele.innerHTML = getLength(pointList)
-                    //     tooltip.setLngLat(coords)
-                    // }
+                    ele.innerHTML = getGPS(coords)
+                    tooltip.setLngLat(coords)
                 }
             }
 
