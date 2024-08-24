@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mapbox GL JS debug page</title>
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <link rel='stylesheet' href='../dist/mapbox-gl.css' />
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+        #controls { position: absolute; top: 10px; left: 10px; background: white; padding: 10px; }
+    </style>
+</head>
+
+<body>
+<div id="map"></div>
+<div id="controls">
+    <label>旋转角度: <input type="range" id="bearing" min="-180" max="180" value="0"></label><br>
+    <label>俯仰角度: <input type="range" id="pitch" min="0" max="60" value="0"></label><br>
+    <label>倾斜角度: <input type="range" id="zoom" min="0" max="22" value="10" step="0.1"></label>
+</div>
+
+
+<script src='../dist/mapbox-gl-dev.js'></script>
+<script src='../debug/access_token_generated.js'></script>
+<script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
+<script>
+
+var map = window.map = new mapboxgl.Map({
+    container: 'map',
+    devtools: true,
+    center: [-122.619991, 45.536023], // starting position [lng, lat]
+    zoom: 10.5, // starting zoom
+    style: 'mapbox://styles/mapbox/streets-v10',
+    hash: true,
+    projection: 'globe',
+});
+
+map.on('load', function () {
+    map.addSource('portland', {
+        'type': 'raster',
+        'url': 'mapbox://examples.32xkp0wd'
+    });
+
+    map.addLayer({
+        'id': 'portland',
+        'source': 'portland',
+        'type': 'raster'
+    });
+
+    function updateCamera() {
+        var bearing = document.getElementById('bearing').value;
+        var pitch = document.getElementById('pitch').value;
+        var zoom = document.getElementById('zoom').value;
+
+        map.easeTo({
+            bearing: parseFloat(bearing),
+            pitch: parseFloat(pitch),
+            zoom: parseFloat(zoom)
+        });
+    }
+
+    document.getElementById('bearing').addEventListener('input', updateCamera);
+    document.getElementById('pitch').addEventListener('input', updateCamera);
+    document.getElementById('zoom').addEventListener('input', updateCamera);
+
+
+});
+
+</script>
+</body>
+</html>
