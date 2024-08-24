@@ -95,6 +95,15 @@
     <button onclick="measureAngle()">角度量测</button>
     <button onclick="measureGPS()">坐标测量</button>
     <button onclick="clearAll()">清理</button>
+    <select id="unitSelector" onchange="changeUnit()">
+        <option value="metric">公制</option>
+        <option value="imperial">英制</option>
+    </select>
+    <select id="angleFormatSelector" onchange="changeAngleFormat()">
+        <option value="degree">度</option>
+        <option value="degreeMinute">度分</option>
+        <option value="degreeMinuteSecond">度分秒</option>
+    </select>
 </div>
 <script src='../dist/mapbox-gl-dev.js'></script>
 <script src='../debug/access_token_generated.js'></script>
@@ -102,11 +111,49 @@
 <script>
     class MeatureTool {
         map = void 0
+        layerList = []
         constructor(Map) {
             this.map = Map
+            this.currentUnit = 'metric';
+            this.currentAngleFormat  = 'degree';
+        }
+        // 添加单位切换方法
+        changeUnit(unit) {
+            this.currentUnit = unit;
         }
 
-        layerList = []
+        changeAngleFormat(format) {
+            this.currentAngleFormat = format;
+        }
+
+        formatAngle = (degrees) => {
+            switch (this.currentAngleFormat) {
+            case 'degree':
+                return degrees.toFixed(2) + '°';
+            case 'degreeMinute':
+                return this.toDegreeMinute(degrees);
+            case 'degreeMinuteSecond':
+                return this.toDegreeMinuteSecond(degrees);
+            default:
+                return degrees.toFixed(2) + '°';
+            }
+        }
+
+        toDegreeMinute = (degrees) => {
+            const d = Math.floor(Math.abs(degrees));
+            const m = ((Math.abs(degrees) - d) * 60).toFixed(2);
+            const direction = degrees >= 0 ? '' : '-';
+            return `${direction}${d}° ${m}'`;
+        }
+
+        toDegreeMinuteSecond = (degrees) => {
+            const d = Math.floor(Math.abs(degrees));
+            const m = Math.floor(((Math.abs(degrees) - d) * 60));
+            const s = (((Math.abs(degrees) - d) * 60 - m) * 60).toFixed(2);
+            const direction = degrees >= 0 ? '' : '-';
+            return `${direction}${d}° ${m}' ${s}"`;
+        }
+
 
         /**
          * 测量距离
@@ -116,6 +163,7 @@
             this.layerList.push(layerId)
             let isMeasure = true;
             const map = this.map
+            const currentUnit = this.currentUnit
             map.doubleClickZoom.disable()
 
             const jsonPoint = {
@@ -344,10 +392,18 @@
             function getLength(pointList) {
                 const line = turf.lineString(pointList)
                 let len = turf.length(line)
-                if (len < 1) {
-                    len = Math.round(len * 1000) + '米'
+                if (currentUnit === 'imperial') {
+                    if (len < 0.621371) {
+                        len = Math.round(len * 5280) + '英尺';
+                    } else {
+                        len = (len * 0.621371).toFixed(2) + '英里';
+                    }
                 } else {
-                    len = len.toFixed(2) + '公里'
+                    if (len < 1) {
+                        len = Math.round(len * 1000) + '米';
+                    } else {
+                        len = len.toFixed(2) + '公里';
+                    }
                 }
                 return len
             }
@@ -452,6 +508,7 @@
             this.layerList.push(layerId)
             var isMeasure = true
             const map = this.map
+            const currentUnit = this.currentUnit
             map.doubleClickZoom.disable()
 
             const jsonPoint = {
@@ -627,10 +684,18 @@
                 pointList.push(pointList[0])
                 const polygon = turf.polygon([pointList])
                 let area = turf.area(polygon)
-                if (area < 10000) {
-                    area = Math.round(area) + '平方米'
+                if (currentUnit === 'imperial') {
+                    if (area < 92903) {
+                        area = Math.round(area * 10.7639) + '平方英尺';
+                    } else {
+                        area = (area / 2589988.11).toFixed(2) + '平方英里';
+                    }
                 } else {
-                    area = (area / 1000000).toFixed(2) + '平方公里'
+                    if (area < 10000) {
+                        area = Math.round(area) + '平方米';
+                    } else {
+                        area = (area / 1000000).toFixed(2) + '平方公里';
+                    }
                 }
                 return area
             }
@@ -797,6 +862,7 @@
             this.layerList.push(layerId)
             var isMeasure = true
             const map = this.map
+            const currentUnit = this.currentUnit
             map.doubleClickZoom.disable()
 
             const jsonPoint = {
@@ -960,10 +1026,18 @@
                 pointList.push(pointList[0])
                 const polygon = turf.polygon([pointList])
                 let area = turf.area(polygon)
-                if (area < 10000) {
-                    area = Math.round(area) + '平方米'
+                if (currentUnit === 'imperial') {
+                    if (area < 92903) {
+                        area = Math.round(area * 10.7639) + '平方英尺';
+                    } else {
+                        area = (area / 2589988.11).toFixed(2) + '平方英里';
+                    }
                 } else {
-                    area = (area / 1000000).toFixed(2) + '平方公里'
+                    if (area < 10000) {
+                        area = Math.round(area) + '平方米';
+                    } else {
+                        area = (area / 1000000).toFixed(2) + '平方公里';
+                    }
                 }
                 return area
             }
@@ -1132,6 +1206,7 @@
             this.layerList.push(layerId)
             var isMeasure = true
             const map = this.map
+            const currentUnit = this.currentUnit
             map.doubleClickZoom.disable()
 
             const jsonPoint = {
@@ -1291,7 +1366,8 @@
                             anchor: 'left',
                             offset: [0, 0],
                         }
-                        element.innerHTML = turf.area(ellipse).toFixed(1)+'平方米';// 计算椭圆的面积
+
+                        element.innerHTML = getArea(ellipse);// 计算椭圆的面积
                         element.appendChild(clear)
                         new mapboxgl.Marker(option).setLngLat(jsonPoint.features[jsonPoint.features.length-1].geometry.coordinates).addTo(map)
                         finish()
@@ -1304,14 +1380,20 @@
              * @param {*} pointList
              * @returns
              */
-            function getArea(pointList) {
-                pointList.push(pointList[0])
-                const polygon = turf.polygon([pointList])
-                let area = turf.area(polygon)
-                if (area < 10000) {
-                    area = Math.round(area) + '平方米'
+            function getArea(ellipse) {
+                let area = turf.area(ellipse).toFixed(1)
+                if (currentUnit === 'imperial') {
+                    if (area < 92903) {
+                        area = Math.round(area * 10.7639) + '平方英尺';
+                    } else {
+                        area = (area / 2589988.11).toFixed(2) + '平方英里';
+                    }
                 } else {
-                    area = (area / 1000000).toFixed(2) + '平方公里'
+                    if (area < 10000) {
+                        area = Math.round(area) + '平方米';
+                    } else {
+                        area = (area / 1000000).toFixed(2) + '平方公里';
+                    }
                 }
                 return area
             }
@@ -1390,7 +1472,7 @@
                             // 使用turf.ellipse()生成椭圆
                             var ellipse = turf.ellipse(center, xSemiAxis, ySemiAxis,{units: 'meters', angle: angleDegrees});
                             map.getSource('line-area' + layerId).setData(ellipse)
-                            ele.innerHTML = turf.area(ellipse).toFixed(1)+'平方米';// 计算椭圆的面积
+                            ele.innerHTML =  getArea(ellipse);// 计算椭圆的面积;// 计算椭圆的面积
                             tooltip.setLngLat(coords)
 
                         }
@@ -1436,6 +1518,7 @@
             this.layerList.push(layerId)
             let isMeasure = true;
             const map = this.map
+            const formatAngle = this.formatAngle
             map.doubleClickZoom.disable()
 
             const jsonPoint = {
@@ -1715,13 +1798,13 @@
             }
 
             /**
-             * 计算长度
+             * 计算方位角
              * @param {*} pointList
              * @returns
              */
             function getAzimuth(pointList) {
               const angle = getAngleHandle(...pointList.flat())
-                let text =angle.toFixed(2)+'°'
+                let text =formatAngle(angle)
                 return text
             }
 
@@ -1857,6 +1940,7 @@
             this.layerList.push(layerId)
             let isMeasure = true;
             const map = this.map
+            const formatAngle = this.formatAngle
             map.doubleClickZoom.disable()
 
             const jsonPoint = {
@@ -2053,7 +2137,7 @@
              */
             function getAngle(pointList) {
                 const angle = angleBetweenThreePoints(...pointList.flat())
-                let text =angle.toFixed(2)+'°'
+                let text =formatAngle(angle);
                 return text
             }
 
@@ -2192,6 +2276,7 @@
             this.layerList.push(layerId)
             let isMeasure = true;
             const map = this.map
+            const formatAngle = this.formatAngle
             map.doubleClickZoom.disable()
 
             const jsonPoint = {
@@ -2324,7 +2409,7 @@
              * @returns
              */
             function getGPS(coords) {
-                let text = '经度：'+coords[0].toFixed(4)+' 纬度：'+coords[1].toFixed(4);
+                let text = '经度：'+formatAngle(coords[0])+' 纬度：'+formatAngle(coords[1]);
                 return text
             }
 
@@ -2438,6 +2523,16 @@ var map = window.map = new mapboxgl.Map({
     hash: true
 });
    var meatureTool ;
+    function changeUnit() {
+        if (meatureTool) {
+            meatureTool.changeUnit(document.getElementById('unitSelector').value);
+        }
+    }
+    function changeAngleFormat() {
+        if (meatureTool) {
+            meatureTool.changeAngleFormat(document.getElementById('angleFormatSelector').value);
+        }
+    }
     // 测量距离
   function  measureDistance() {
         // ID可以自定义
