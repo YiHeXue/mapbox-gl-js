@@ -1601,7 +1601,7 @@
                         var preEnd = jsonPoint.features[length - 2 ].geometry.coordinates;
                         var bearing = turf.bearing(preEnd, end);
 
-                        var arrowLength = 0.05;
+                        var arrowLength = 0.2 * turf.distance(end,preEnd);
                         var arrowAngle = 20;
                         var leftWing = turf.destination(end, arrowLength, bearing - 180 + arrowAngle);
                         var rightWing = turf.destination(end, arrowLength, bearing - 180 - arrowAngle);
@@ -1696,7 +1696,6 @@
              */
             function addMeasureRes(jsonPoint) {
                 if (jsonPoint.features.length === 2) {
-                    debugger
                     removedom()
                     const pointList = []
                     for (let i = 0; i < jsonPoint.features.length; i++) {
@@ -1824,7 +1823,7 @@
                     }
                     map.getSource('point-move' + layerId).setData(jsonp)
 
-                    if (jsonPoint.features.length > 1) {
+                    if (jsonPoint.features.length > 0) {
                         const pointList = []
                         for (let i = 0; i < jsonPoint.features.length; i++) {
                             const coord = jsonPoint.features[i].geometry.coordinates
