@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mapbox GL JS debug page</title>
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <link rel='stylesheet' href='../dist/mapbox-gl.css' />
+    <style>
+        body { margin: 0; padding: 0; }
+        html, body, #map { height: 100%; }
+        #checkbox {
+            position: absolute;
+            top: 0;
+            left: 0;
+            padding: 10px;
+            background: #fff;
+        }
+    </style>
+</head>
+
+<body>
+<script src="https://cdn.jsdelivr.net/gh/jscastro76/threebox@v.2.2.2/dist/threebox.min.js" type="text/javascript"></script>
+<link href="https://cdn.jsdelivr.net/gh/jscastro76/threebox@v.2.2.2/dist/threebox.css" rel="stylesheet">
+<div id='map'></div>
+<div id='checkbox'>
+    <label><input id='terrain' type='checkbox'> terrain</label>
+</div>
+
+<script src='../dist/mapbox-gl-dev.js'></script>
+<script src='../debug/access_token_generated.js'></script>
+<script>
+
+    // TO MAKE THE MAP APPEAR YOU MUST
+    // ADD YOUR ACCESS TOKEN FROM
+    // https://account.mapbox.com
+    // mapboxgl.accessToken = 'YOUR_MAPBOX_ACCESS_TOKEN';
+    // 创建地图
+    const map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/dark-v10',
+        center: [0, 0],
+        zoom: 2
+    });
+
+    class RadarLayer {
+        constructor(id, options = {}) {
+            this.id = id;
+            this.type = 'custom';
+            this.renderingMode = '3d';
+            this.options = Object.assign({
+                radius: 50,
+                color: 0x00ff00,
+                segments: 32
+            }, options);
+        }
+
+        onAdd(map, gl) {
+            this.map = map;
+            this.gl = gl;
+
+            try {
+                this.scene = new THREE.Scene();
+                this.camera = new THREE.Camera();
+                this.renderer = new THREE.WebGLRenderer({
+                    canvas: map.getCanvas(),
+                    context: gl,
+                    antialias: true,
+                    alpha: true,
+                    premultipliedAlpha: false,
+                    preserveDrawingBuffer: true,
+                });
+
+                this.renderer.autoClear = false;
+                this.renderer.setPixelRatio(window.devicePixelRatio);
+
+                const geometry = new THREE.CircleGeometry(this.options.radius, this.options.segments);
+                const material = new THREE.ShaderMaterial({
+                    uniforms: {
+                        time: { value: 0 },
+                        color: { value: new THREE.Color(this.options.color) }
+                    },
+                    vertexShader: `
+                            varying vec2 vUv;
+                            void main() {
+                                vUv = uv;
+                                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                            }
+                        `,
+                    fragmentShader: `
+                            uniform float time;
+                            uniform vec3 color;
+                            varying vec2 vUv;
+                            void main() {
+                                float angle = atan(vUv.y - 0.5, vUv.x - 0.5);
+                                float normAngle = (angle + 3.14159) / (2.0 * 3.14159);
+                                float scanAngle = mod(time * 0.5, 1.0);
+                                float alpha = 1.0 - step(0.02, abs(normAngle - scanAngle));
+                                gl_FragColor = vec4(color, alpha * 0.5);
+                            }
+                        `,
+                    transparent: true,
+                    side: THREE.DoubleSide
+                });
+
+                this.radar = new THREE.Mesh(geometry, material);
+                this.radar.rotation.x = -Math.PI / 2;
+                this.scene.add(this.radar);
+
+                console.log('Three.js scene initialized successfully');
+            } catch (error) {
+                console.error('Error initializing Three.js scene:', error);
+            }
+        }
+
+        render(gl, matrix) {
+            if (!this.renderer) {
+                console.warn('Renderer not initialized');
+                return;
+            }
+
+            const rotationX = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+            const rotationZ = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0, 0, 1), this.map.getBearing() * Math.PI / 180);
+            const m = new THREE.Matrix4().fromArray(matrix);
+            const l = new THREE.Matrix4().makeTranslation(0, 0, 0).scale(new THREE.Vector3(1, -1, 1));
+
+            this.camera.projectionMatrix.copy(m.multiply(l).multiply(rotationX).multiply(rotationZ));
+
+            const currentViewport = gl.getParameter(gl.VIEWPORT);
+
+            try {
+                this.renderer.resetState();
+                this.renderer.setViewport(
+                    currentViewport[0],
+                    currentViewport[1],
+                    currentViewport[2],
+                    currentViewport[3]
+                );
+                this.renderer.render(this.scene, this.camera);
+
+                this.radar.material.uniforms.time.value += 0.01;
+            } catch (error) {
+                console.error('Error rendering Three.js scene:', error);
+            }
+
+            this.map.triggerRepaint();
+        }
+    }
+
+    map.on('load', () => {
+        try {
+            const radarLayer = new RadarLayer('radar', {
+                radius: 50,
+                color: 0x00ff00,
+                segments: 32
+            });
+            map.addLayer(radarLayer);
+            console.log('Radar layer added successfully');
+        } catch (error) {
+            console.error('Error adding radar layer:', error);
+        }
+    });
+
+    // 添加一些调试信息
+    map.on('error', (e) => {
+        console.error('Mapbox GL JS error:', e);
+    });
+
+    window.addEventListener('error', (e) => {
+        console.error('Global error:', e.error);
+    });
+</script>
+</body>
+</html>

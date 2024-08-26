@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beijing Tiananmen Radar Station</title>
+
+    <script src='../dist/mapbox-gl-dev.js'></script>
+    <script src='../debug/access_token_generated.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.css' rel='stylesheet' />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+    </style>
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/gh/jscastro76/threebox@v.2.2.2/dist/threebox.min.js" type="text/javascript"></script>
+<link href="https://cdn.jsdelivr.net/gh/jscastro76/threebox@v.2.2.2/dist/threebox.css" rel="stylesheet">
+<div id="map"></div>
+<script>
+    initMap();
+    const clock = new THREE.Clock();
+    const TIANANMEN_COORDINATE = [116.3912, 39.9055];
+    let radarMesh, tb, outerCircleMesh;
+
+    function animate() {
+        requestAnimationFrame(animate);
+        map.triggerRepaint()
+    }
+
+    function initMap() {
+        map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/satellite-streets-v11',
+            center: [116.3912, 39.9055],
+            zoom: 16,
+            pitch: 60,
+            bearing: 0
+        });
+
+        map.on('style.load', () => {
+            tb = new Threebox(map, map.getCanvas().getContext('webgl'), {
+                defaultLights: true
+            });
+
+            map.addLayer({
+                id: 'custom-radar',
+                type: 'custom',
+                renderingMode: '3d',
+                onAdd: function () {
+                    // 内部的雷达扫描
+                    const geometry = new THREE.CircleGeometry(50, 64);
+                    const material = new THREE.ShaderMaterial({
+                        uniforms: {
+                            uTime: { value: 0 },
+                            uSpeed: { value: 300 },
+                            uRadius: { value: 500 },
+                            uFollowWidth: { value: 50 },
+                        },
+                        vertexShader: `
+                            varying vec3 vPosition;
+                            void main() {
+                                vPosition = position;
+                              //vPosition = vec3(modelMatrix * vec4(position, 1.0));
+                              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                            }
+                        `,
+                        fragmentShader: `
+                            uniform float uRadius;
+                            uniform float uTime;
+                            uniform float uSpeed;
+                            uniform float uFollowWidth;
+                            varying vec3 vPosition;
+
+                            float calcAngle(vec3 oFrag) {
+                              float fragAngle;
+                              const vec3 ox = vec3(1,0,0);
+                              float dianji = oFrag.x * ox.x + oFrag.z * ox.z;
+                              float oFrag_length = length(oFrag);
+                              float ox_length = length(ox);
+                              float yuxian = dianji / (oFrag_length * ox_length);
+                              fragAngle = acos(yuxian);
+                              fragAngle = degrees(fragAngle);
+                              if(oFrag.z > 0.0) {
+                                fragAngle = -fragAngle + 360.0;
+                              }
+                              float scanAngle = uTime * uSpeed - floor(uTime * uSpeed / 360.0) * 360.0;
+                              float angle = scanAngle - fragAngle;
+                              if(angle < 0.0) {
+                                angle = angle + 360.0;
+                              }
+                              return angle;
+                            }
+
+                            void main() {
+                              if(length(vPosition) == 0.0 || length(vPosition) > uRadius-2.0){
+                                gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+                              } else {
+                                float angle = calcAngle(vPosition);
+                                if(angle < uFollowWidth){
+                                  float opacity = 1.0 - angle / uFollowWidth;
+                                  gl_FragColor = vec4(0.0, 1.0, 0.0, opacity);
+                                } else {
+                                  gl_FragColor = vec4(0.0, 1.0, 0.0, 0.0);
+                                }
+                              }
+                            }
+                        `,
+                        transparent: true,
+                    });
+
+                    radarMesh = new THREE.Mesh(geometry, material);
+                    radarMesh.rotateX(-Math.PI / 2);
+
+                    // 外部圆圈
+                    const outerCircleGeometry = new THREE.CircleGeometry(50, 64); // 比雷达圆半径稍大
+                    const outerCircleMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.5 });
+                    outerCircleMesh = new THREE.Mesh(outerCircleGeometry, outerCircleMaterial);
+                    outerCircleMesh.rotateX(-Math.PI / 2);
+
+                    // 将两个圆圈添加到 Threebox 场景中
+                    const radarObject = tb.Object3D({ obj: radarMesh });
+                    const outerCircleObject = tb.Object3D({ obj: outerCircleMesh });
+                    radarObject.setCoords(TIANANMEN_COORDINATE);
+                    outerCircleObject.setCoords(TIANANMEN_COORDINATE);
+                    tb.add(radarObject);
+                    tb.add(outerCircleObject);
+
+                    animate(); // 启动动画循环
+                },
+                render: function () {
+                    if (radarMesh) {
+                        const deltaTime = clock.getDelta();
+                        radarMesh.material.uniforms.uTime.value += deltaTime;
+                        radarMesh.material.needsUpdate = true;
+                    }
+                    tb.update();
+                }
+            });
+        });
+    }
+</script>
+</body>
+</html>

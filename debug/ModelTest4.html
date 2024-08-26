@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beijing Tiananmen Radar Station</title>
+
+    <script src='../dist/mapbox-gl-dev.js'></script>
+    <script src='../debug/access_token_generated.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.css' rel='stylesheet' />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+    </style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+    initMap();
+    clock = new THREE.Clock();
+
+    function initMap() {
+        map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/satellite-streets-v11',
+            center: [116.3912, 39.9055], // 天安门坐标
+            zoom: 16,
+            pitch: 60,
+            bearing: 0
+        });
+
+        map.on('load', () => {
+            map.addLayer(createRadarLayer());
+        });
+    }
+
+    function createRadarLayer() {
+        const radarLayer = {
+            id: 'radar',
+            type: 'custom',
+            renderingMode: '3d',
+            onAdd: function(map, gl) {
+                const scene = new THREE.Scene();
+                const camera = new THREE.Camera();
+                const renderer = new THREE.WebGLRenderer({
+                    canvas: map.getCanvas(),
+                    context: gl,
+                    antialias: true,
+                });
+
+                renderer.autoClear = false;
+
+                const geometry = new THREE.CircleGeometry(50, 64);
+                const material = new THREE.ShaderMaterial({
+                    uniforms: {
+                        uTime: { value: 0 },
+                        uSpeed: { value: 300 },
+                        uRadius: { value: 50 },
+                        uFollowWidth: { value: 50 },
+                    },
+                    vertexShader: `
+          varying vec3 vPosition;
+          void main() {
+            vPosition = vec3(modelMatrix * vec4(position, 1.0));
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+                    fragmentShader: `
+          uniform float uRadius;
+          uniform float uTime;
+          uniform float uSpeed;
+          uniform float uFollowWidth;
+          varying vec3 vPosition;
+
+          float calcAngle(vec3 oFrag) {
+            float fragAngle;
+            const vec3 ox = vec3(1,0,0);
+            float dianji = oFrag.x * ox.x + oFrag.z*ox.z;
+            float oFrag_length = length(oFrag);
+            float ox_length = length(ox);
+            float yuxian = dianji / (oFrag_length * ox_length);
+            fragAngle = acos(yuxian);
+            fragAngle = degrees(fragAngle);
+            if(oFrag.z > 0.0) {
+              fragAngle = -fragAngle + 360.0;
+            }
+            float scanAngle = uTime * uSpeed - floor(uTime * uSpeed / 360.0) * 360.0;
+            float angle = scanAngle - fragAngle;
+            if(angle < 0.0){
+              angle = angle + 360.0;
+            }
+            return angle;
+          }
+
+          void main() {
+            if(length(vPosition) == 0.0 || length(vPosition) > uRadius-2.0){
+              gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+            } else {
+              float angle = calcAngle(vPosition);
+              if(angle < uFollowWidth){
+                float opacity = 1.0 - angle / uFollowWidth;
+                gl_FragColor = vec4(0.0, 1.0, 0.0, opacity);
+              } else {
+                gl_FragColor = vec4(0.0, 1.0, 0.0, 0.0);
+              }
+            }
+          }
+        `,
+                    transparent: true,
+                });
+
+                radarMesh = new THREE.Mesh(geometry, material);
+                radarMesh.rotateX(-Math.PI / 2);
+                scene.add(radarMesh);
+
+                this.map = map;
+                this.scene = scene;
+                this.camera = camera;
+                this.renderer = renderer;
+            },
+            render: function(gl, matrix) {
+                const rotationX = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+                const rotationZ = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0, 0, 1), this.map.getBearing() * Math.PI / 180);
+                const m = new THREE.Matrix4().fromArray(matrix);
+                const l = new THREE.Matrix4().makeTranslation(0, 0, 0).scale(new THREE.Vector3(1, -1, 1));
+
+                this.camera.projectionMatrix.copy(m.multiply(l).multiply(rotationX).multiply(rotationZ));
+
+                const deltaTime = clock.getDelta();
+                radarMesh.material.uniforms.uTime.value += deltaTime;
+
+                this.renderer.resetState();
+                this.renderer.render(this.scene, this.camera);
+                this.map.triggerRepaint();
+            }
+        };
+
+        return radarLayer;
+    }
+</script>
+</body>
+</html>
