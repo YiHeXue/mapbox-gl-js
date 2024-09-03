@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beijing Tiananmen Radar Station</title>
+
+    <script src='https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.css' rel='stylesheet' />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+    </style>
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/gh/jscastro76/threebox@v.2.2.2/dist/threebox.min.js" type="text/javascript"></script>
+<link href="https://cdn.jsdelivr.net/gh/jscastro76/threebox@v.2.2.2/dist/threebox.css" rel="stylesheet">
+<div id="map"></div>
+<script>
+    mapboxgl.accessToken = "pk.eyJ1IjoicWlhbmt1bjIwMDgiLCJhIjoiY2xoeXhvN2F0MGo1dTNlbjJqZGJqcDgzZiJ9.sH0gd_kX-AFZkWf_VKBWmA";
+    initMap();
+
+    const clock = new THREE.Clock();
+    let tb = null, materials = [];
+
+    function animate() {
+        requestAnimationFrame(animate);
+        map.triggerRepaint()
+    }
+
+    function createMaterial() {
+        let material = new THREE.ShaderMaterial({
+            uniforms: {
+                uTime: { value: 0 },
+            },
+            vertexShader: `
+                            varying vec3 vPosition;
+                            varying vec2 vUv;
+                            void main() {
+                                vUv = 2.0 * (uv - vec2(0.5, 0.5));
+                                vPosition = position;
+                                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                            }
+                        `,
+            fragmentShader: `
+                            varying vec2 vUv;
+                            uniform float uTime;
+                            mat2 rotate2d(float angle)
+                            {
+                                return mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
+                            }
+                            float vertical_line(in vec2 uv)
+                            {
+                                if (uv.y > 0.0 && length(uv) < 1.0)
+                                {
+                                    float theta = mod(180.0 * atan(uv.y, uv.x)/3.14, 360.0);
+                                    float gradient = clamp(1.0-theta/90.0,0.0,1.0);
+                                    return 0.5 * gradient;
+                                }
+                                return 0.0;
+                            }
+                            void main() {
+                                if (length(vUv) < 1.0)
+                                {
+                                    gl_FragColor = vec4(1.0, 0.0, 0.0, 0.4);
+
+                                    mat2 rotation_matrix = rotate2d(-uTime*3.141592653*2.0);
+                                    gl_FragColor.rgb= mix(gl_FragColor.rgb, vec3(0.0, 1.0, 0.0), 2.0 * vertical_line(rotation_matrix * vUv));
+                                }
+                                else
+                                {
+                                    gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+                                }
+                            }
+                        `,
+            transparent: true,
+        });
+        return material;
+    }
+
+    function initMap() {
+        map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/satellite-streets-v11',
+            center: [116.3912, 39.9055],
+            zoom: 16,
+            pitch: 60,
+            bearing: 0
+        });
+
+        map.on('style.load', () => {
+            tb = new Threebox(map, map.getCanvas().getContext('webgl'), {
+                defaultLights: true
+            });
+
+            map.addLayer({
+                id: 'custom-radar',
+                type: 'custom',
+                renderingMode: '3d',
+                onAdd: function () {
+                    let material = createMaterial();
+                    materials.push(material);
+
+                    const geometry1 = new THREE.PlaneGeometry(100, 100);
+                    const radarMesh1 = new THREE.Mesh(geometry1, material);
+                    radarMesh1.rotateX(-Math.PI * 0.5);
+                    const radarObject1 = tb.Object3D({ obj: radarMesh1 });
+                    radarObject1.setCoords([116.39, 39.9]);
+                    tb.add(radarObject1);
+
+
+                    const geometry2 = new THREE.PlaneGeometry(100, 100);
+                    const radarMesh2 = new THREE.Mesh(geometry2, material);
+                    radarMesh2.rotateX(-Math.PI * 0.5);
+                    const radarObject2 = tb.Object3D({ obj: radarMesh2 });
+                    radarObject2.setCoords([116.4212, 39.6055]);
+                    tb.add(radarObject2);
+
+
+                    animate(); // Start animation loop
+                },
+                render: function () {
+                    if (materials.length > 0) {
+                        const deltaTime = clock.getDelta();
+                        for (let i = 0; i < materials.length; i++) {
+                            materials[i].uniforms.uTime.value += deltaTime;
+                            materials[i].needsUpdate = true;
+                        }
+                    }
+                    tb.update();
+                }
+            });
+        });
+    }
+</script>
+</body>
+</html>
