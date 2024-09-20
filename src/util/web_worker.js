@@ -1,5 +1,6 @@
 // @flow
 
+import type {AddProtocolAction} from './protocol_action.js';
 import WorkerClass from './worker_class.js';
 import type {Class} from '../types/class.js';
 import type {WorkerSource} from '../source/worker_source.js';
@@ -19,7 +20,10 @@ export interface WorkerGlobalScopeInterface {
     importScripts(...urls: Array<string>): void;
 
     registerWorkerSource?: (string, Class<WorkerSource>) => void,
-    registerRTLTextPlugin?: (_: any) => void
+    registerRTLTextPlugin?: (_: any) => void,
+
+    addProtocol: (customProtocol: string, loadFn: AddProtocolAction) => void;
+    removeProtocol: (customProtocol: string) => void;
 }
 
 export default function (): WorkerInterface {

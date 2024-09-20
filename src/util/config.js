@@ -1,4 +1,5 @@
 // @flow strict
+import type {AddProtocolAction} from './protocol_action.js';
 
 type Config = {|
   API_URL: string,
@@ -22,6 +23,7 @@ type Config = {|
   MESHOPT_SIMD_URL: string,
   DEFAULT_STYLE: string,
   GLYPHS_URL: string,
+  REGISTERED_PROTOCOLS: {[x: string]: AddProtocolAction },
 |};
 
 let mapboxHTTPURLRegex;
@@ -86,7 +88,8 @@ const config: Config = {
     DRACO_URL: 'https://api.mapbox.com/mapbox-gl-js/draco_decoder_gltf_v1.5.6.wasm',
     MESHOPT_URL: 'https://api.mapbox.com/mapbox-gl-js/meshopt_base_v0.20.wasm',
     MESHOPT_SIMD_URL: 'https://api.mapbox.com/mapbox-gl-js/meshopt_simd_v0.20.wasm',
-    GLYPHS_URL: 'mapbox://fonts/mapbox/{fontstack}/{range}.pbf'
+    GLYPHS_URL: 'mapbox://fonts/mapbox/{fontstack}/{range}.pbf',
+    REGISTERED_PROTOCOLS: {},
 };
 
 export default config;

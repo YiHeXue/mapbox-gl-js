@@ -35,6 +35,8 @@ import type {ConfigOptions} from '../style/properties.js';
 import type {PluginState} from './rtl_text_plugin.js';
 import type Projection from '../geo/projection/projection.js';
 
+import {addProtocol, removeProtocol} from '../util/protocol_crud';
+
 /**
  * @private
  */
@@ -92,6 +94,9 @@ export default class Worker {
             globalRTLTextPlugin['processBidirectionalText'] = rtlTextPlugin.processBidirectionalText;
             globalRTLTextPlugin['processStyledBidirectionalText'] = rtlTextPlugin.processStyledBidirectionalText;
         };
+
+        this.self.addProtocol = addProtocol;
+        this.self.removeProtocol = removeProtocol;
     }
 
     clearCaches(mapId: string, unused: mixed, callback: WorkerTileCallback) {

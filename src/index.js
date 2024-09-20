@@ -22,6 +22,7 @@ import {Evented} from './util/evented.js';
 import config from './util/config.js';
 import {Debug} from './util/debug.js';
 import {isSafari} from './util/util.js';
+import {addProtocol, removeProtocol} from './util/protocol_crud';
 import {setRTLTextPlugin, getRTLTextPluginStatus} from './source/rtl_text_plugin.js';
 import WorkerPool from './util/worker_pool.js';
 import WorkerClass from './util/worker_class.js';
@@ -53,6 +54,8 @@ const exported = {
     FreeCameraOptions,
     Evented,
     config,
+    addProtocol,
+    removeProtocol,
     /**
      * Initializes resources like WebWorkers that can be shared across maps to lower load
      * times in some situations. [`mapboxgl.workerUrl`](https://docs.mapbox.com/mapbox-gl-js/api/properties/#workerurl)

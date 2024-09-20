@@ -10,6 +10,8 @@ import webpSupported from './webp_supported.js';
 import type {Callback} from '../types/callback.js';
 import type {Cancelable} from '../types/cancelable.js';
 
+import {getProtocol} from './protocol_crud';
+
 /**
  * The type of a resource.
  * @private
@@ -240,6 +242,17 @@ export const makeRequest = function(requestParameters: RequestParameters, callba
     //   we dispatch the request to the main thread so that we can get an accurate referrer header.
     // - Requests for resources with the file:// URI scheme don't work with the Fetch API either. In
     //   this case we unconditionally use XHR on the current thread since referrers don't matter.
+    if (/:\/\//.test(requestParameters.url) && !(/^https?:|^file:/.test(requestParameters.url))) {
+        const protocolLoadFn = getProtocol(requestParameters.url);
+        if (protocolLoadFn) {
+            return protocolLoadFn(requestParameters, callback);
+        }
+        if (isWorker() && self.worker && self.worker.actor) {
+            const queueOnMainThread = true;
+            return self.worker.actor.send('getResource', requestParameters, callback, undefined, queueOnMainThread);
+        }
+    }
+
     if (!isFileURL(requestParameters.url)) {
         if (self.fetch && self.Request && self.AbortController && Request.prototype.hasOwnProperty('signal')) {
             return makeFetchRequest(requestParameters, callback);
