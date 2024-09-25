@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>栅格瓦片全球数据加载</title>
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <link rel='stylesheet' href='../dist/mapbox-gl.css' />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body,
+        #map {
+            height: 100%;
+        }
+        #pane {
+            position: absolute;
+            top: 1em;
+            left: 1em;
+        }
+    </style>
+</head>
+
+<body>
+    <div id='map'></div>
+    <div id='pane'></div>
+    <script src='../dist/mapbox-gl-dev.js'></script>
+    <script src='../debug/access_token_generated.js'></script>
+    <script src='https://unpkg.com/d3@7.8.5/dist/d3.min.js'></script>
+    <script type='module'>
+
+        var map = window.map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/satellite-v9',
+            center: [135.0053045734985, 36.00653610439714],
+            zoom: 1,
+            hash: true,
+            projection:'globe'
+        });
+
+        map.on('style.load', () => {
+
+            map.addSource('temp', {
+                type: 'raster-array',
+                url: 'http://localhost:63342/mapbox-gl-js/data/mrt_1/temperature_2m/tile.json',
+                tileSize: 256
+            });
+            map.addLayer(
+                {
+                    id: 'temp-layer',
+                    type: 'raster',
+                    source: 'temp',
+                    'source-layer': 'temperature',
+                    paint: {
+                        'raster-color-range': [200, 323],
+                        'raster-array-band': '202409221201',
+                        'raster-color': [
+                            'interpolate',
+                            ['linear'],
+                            ['raster-value'],
+                            200,
+                            '#50509B',
+                            266,
+                            '#FAFAA0',
+                            323,
+                            '#96053C'
+                        ],
+                        'raster-resampling': 'linear'
+                    }
+                }
+            );
+        });
+
+    </script>
+</body>
+
+</html>
