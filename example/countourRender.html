@@ -16,6 +16,15 @@
             left:0;
             padding:10px;
         }
+        .mapboxgl-ctrl-bottom-right {
+            display: none !important;
+        }
+        .mapboxgl-ctrl-bottom-left {
+            display: none !important;
+        }
+        .mapboxgl-control-container {
+            display: none !important;
+        }
     </style>
 </head>
 
@@ -166,7 +175,7 @@ map.on('load', function() {
             },
             'paint': {
                 'line-opacity': 0.3,
-                'line-color': 'rgb(75, 146, 171)',
+                'line-color': 'rgb(0, 0, 70)',
                 'line-width': 2
             }
         }
